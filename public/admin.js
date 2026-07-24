@@ -34,6 +34,7 @@ const orderFeedback = document.querySelector("#order-feedback");
 const deleteOrderButton = document.querySelector("#delete-order");
 const deleteAllOrdersButton = document.querySelector("#delete-all-orders");
 const ordersView = document.querySelector("#orders-view");
+const orderSidebar = document.querySelector("#order-sidebar");
 const archiveSidebar = document.querySelector("#archive-sidebar");
 const archiveList = document.querySelector("#archive-list");
 const archiveListStatus = document.querySelector("#archive-list-status");
@@ -241,7 +242,8 @@ async function loadOrder(id) {
   lastNameValue.textContent = currentOrder.lastName;
   adminItems.replaceChildren(...currentOrder.items.map(createItemEditor));
   orderFeedback.textContent = "";
-  renderOrderList();
+  if (currentSection === "archive") renderArchiveList();
+  else renderOrderList();
 }
 
 function showSection(name) {
@@ -518,8 +520,14 @@ saveOrderStatusButton.addEventListener("click", async () => {
     await loadArchive();
     if (result.status === "consegnato" && currentSection !== "archive") {
       showSection("archive");
+      const archivedOrder = archive.find((order) => order.id === orderId);
+      if (archivedOrder) await loadOrder(orderId);
+      else if (archive.length > 0) await loadOrder(archive[0].id);
     } else if (result.status !== "consegnato" && currentSection === "archive") {
       showSection("orders");
+      const restoredOrder = orders.find((order) => order.id === orderId);
+      if (restoredOrder) await loadOrder(orderId);
+      else if (orders.length > 0) await loadOrder(orders[0].id);
     }
     orderFeedback.textContent = "Stato pubblico aggiornato.";
   } catch (error) {
