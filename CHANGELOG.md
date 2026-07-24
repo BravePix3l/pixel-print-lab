@@ -2,6 +2,21 @@
 
 Le modifiche rilevanti del progetto sono raccolte in questo file.
 
+## [0.6.0] - 2026-07-24
+
+### Aggiunto
+
+- Rate limit per upload file e invio ordini (5 richieste ogni 5 minuti).
+- Stato `consegnato` per gli ordini e sezione **Archivio** nella Control Room.
+- Limite di 15 ordini aperti (`in attesa`, `in lavorazione`, `completato`) con avviso pubblico.
+- Pulsante **Elimina tutti** nella Control Room per rimuovere tutti gli ordini e i relativi file.
+- Pulsante **Elimina** nello storico utente per eliminare un ordine proprio.
+- File `AGENTS.md` con le convenzioni del progetto (solo locale).
+
+### Corretto
+
+- Variabile `orderSidebar` non definita in `public/admin.js` che bloccava i tasti di navigazione dopo aver archiviato un ordine.
+
 ## [0.5.1] - 2026-07-18
 
 ### Corretto
@@ -70,6 +85,9 @@ Le modifiche rilevanti del progetto sono raccolte in questo file.
 - Distribuzione self-hosted con Docker Compose e volumi persistenti.
 - Test automatici e build Docker tramite GitHub Actions.
 
+[0.6.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.5.1...v0.6.0
+[0.5.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.4.1...v0.5.0
 [0.4.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.3.0...v0.4.0
 [0.4.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.4.0...v0.4.1
 [0.3.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.2.0...v0.3.0
