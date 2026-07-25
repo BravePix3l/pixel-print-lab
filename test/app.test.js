@@ -173,7 +173,7 @@ test("serve la pagina pubblica con un catalogo accessibile", async () => {
   assert.match(page, /id="checkout-form"/);
   assert.match(page, /id="confirmation-code"/);
   assert.match(page, /type="importmap"/);
-  assert.match(page, /<script type="module" src="\/app.js"><\/script>/);
+  assert.match(page, /<script type="module" src="\/app.js(\?v=[^"]+)?"><\/script>/);
 });
 
 test("serve gli asset pubblici", async () => {

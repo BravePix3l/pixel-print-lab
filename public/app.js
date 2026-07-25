@@ -517,9 +517,9 @@ async function submitAccountForm(form, endpoint) {
 
 function updatePrintScene(orders) {
   const completed = orders.filter((order) => order.status === "completato").length;
-  const pending = orders.length - completed;
-  printSceneProgressText.textContent = orders.length ? `Livello ${completed} / ${pending}` : "Livello 0 / 0";
-  printSceneProgressBar.style.width = orders.length ? `${(completed / orders.length) * 100}%` : "0%";
+  const total = orders.length;
+  printSceneProgressText.textContent = orders.length ? `Livello ${completed} / ${total}` : "Livello 0 / 0";
+  printSceneProgressBar.style.width = orders.length ? `${(completed / total) * 100}%` : "0%";
   const printingOrder = orders.find((order) => order.status === "in_lavorazione");
   printSceneScreen.textContent = printingOrder ? printingOrder.code : "STANDBY";
 }
