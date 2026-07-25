@@ -325,6 +325,15 @@ function discardInspectedUpload() {
   inspectedUpload = undefined;
 }
 
+function updateCustomFormReadiness() {
+  const source = getCustomSource();
+  const hasModel = source === "file"
+    ? !!customFileInput.files[0]
+    : customLinkInput.value.trim().length > 0;
+  customForm.classList.toggle("is-ready", hasModel);
+  customSubmitButton.disabled = !hasModel || colors.length === 0;
+}
+
 function updateCustomSource() {
   const source = getCustomSource();
   const usesFile = source === "file";
@@ -592,7 +601,7 @@ async function reconcileUploadedFiles(items) {
 
 customSourceInputs.forEach((input) => input.addEventListener("change", () => {
   updateCustomSource();
-  customForm.classList.add("is-expanded");
+  updateCustomFormReadiness();
 }));
 
 customFileInput.addEventListener("change", () => {
@@ -601,6 +610,12 @@ customFileInput.addEventListener("change", () => {
   customFileName.textContent = file?.name ?? "Nessun file selezionato";
   customPreviewButton.disabled = !file;
   customFeedback.textContent = "";
+  updateCustomFormReadiness();
+});
+
+customLinkInput.addEventListener("input", () => {
+  customFeedback.textContent = "";
+  updateCustomFormReadiness();
 });
 
 customPreviewButton.addEventListener("click", async () => {
@@ -997,6 +1012,7 @@ if (productList && catalogScrollIndicator) {
 }
 
 updateCustomSource();
+updateCustomFormReadiness();
 loadAccountSession();
 loadCatalog();
 loadPublicOrders();

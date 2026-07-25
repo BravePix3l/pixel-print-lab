@@ -2301,28 +2301,9 @@ h1 em {
     display: none;
   }
 
-  .custom-form {
-    gap: 0;
-  }
-
-  .custom-form:not(.is-expanded) .custom-source-panel,
-  .custom-form:not(.is-expanded) .custom-colors,
-  .custom-form:not(.is-expanded) .custom-quantity,
-  .custom-form:not(.is-expanded) .custom-submit,
-  .custom-form:not(.is-expanded) .custom-feedback {
+  .custom-form:not(.is-ready) .custom-colors,
+  .custom-form:not(.is-ready) .custom-quantity {
     display: none;
-  }
-
-  .custom-form.is-expanded {
-    gap: 1.25rem;
-  }
-
-  .custom-form.is-expanded .custom-source-panel,
-  .custom-form.is-expanded .custom-colors,
-  .custom-form.is-expanded .custom-quantity,
-  .custom-form.is-expanded .custom-submit,
-  .custom-form.is-expanded .custom-feedback {
-    display: block;
   }
 
   .source-selector {

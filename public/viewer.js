@@ -190,6 +190,12 @@ export async function openModelViewer(product) {
       const unitFactor = unitFactors[product.inspection?.unit ?? "millimeter"];
       if (!unitFactor) throw new Error("Unita 3MF non supportata.");
       loadedObject.scale.setScalar(unitFactor);
+      const orangeMaterial = new THREE.MeshStandardMaterial({ color: 0xff6534, roughness: 0.72, metalness: 0.02, flatShading: true });
+      loadedObject.traverse((child) => {
+        if (child.isMesh) {
+          child.material = orangeMaterial;
+        }
+      });
     } else {
       const geometry = await stlLoader.loadAsync(product.modelUrl);
       geometry.computeVertexNormals();
