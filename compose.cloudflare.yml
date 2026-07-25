@@ -7,6 +7,8 @@ services:
     volumes:
       - pixel-print-lab-data:/app/data
       - pixel-print-lab-storage:/app/storage
+    env_file:
+      - .env
     environment:
       ADMIN_USERNAME: "${ADMIN_USERNAME:?Impostare ADMIN_USERNAME nel file .env}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Impostare ADMIN_PASSWORD nel file .env}"

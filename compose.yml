@@ -7,8 +7,9 @@ services:
     volumes:
       - pixel-print-lab-data:/app/data
       - pixel-print-lab-storage:/app/storage
+    env_file:
+      - .env
 
-    # Scommenta e modifica soltanto le variabili che ti servono.
     # environment:
     #   PORT: "3000"
     #   DATABASE_PATH: /app/data/pixel-print-lab.db
