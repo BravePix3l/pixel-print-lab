@@ -71,12 +71,13 @@ function createOrderCode(database, firstName, lastName) {
   const initialFirst = (firstName?.trim()?.[0] ?? "X").toUpperCase();
   const initialLast = (lastName?.trim()?.[0] ?? "X").toUpperCase();
   const initials = `${initialFirst}${initialLast}`;
-  const maxSequence =
-    database
-      .prepare("SELECT MAX(CAST(SUBSTR(code, 4) AS INTEGER)) AS max FROM orders WHERE code LIKE '__-____'")
-      .get()?.max ?? 0;
-  const sequence = maxSequence + 1;
-  return `${initials}-${String(sequence).padStart(4, "0")}`;
+  const findOrderByCode = database.prepare("SELECT code FROM orders WHERE code = ?");
+  for (let attempts = 0; attempts < 100; attempts += 1) {
+    const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+    const code = `${initials}-${suffix}`;
+    if (!findOrderByCode.get(code)) return code;
+  }
+  throw new OrderError("CODE_COLLISION", "Impossibile generare un codice ordine univoco.");
 }
 
 function formatEuro(cents) {

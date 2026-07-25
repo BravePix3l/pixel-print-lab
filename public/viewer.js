@@ -150,10 +150,11 @@ function startRendering() {
   });
 }
 
-export async function openModelViewer(product) {
+export async function openModelViewer(product, colorHex = "#ffffff") {
   initializeViewer();
   const currentLoad = ++loadVersion;
   clearModel();
+  const modelColor = Number.parseInt(colorHex.replace("#", ""), 16);
   title.textContent = product.name;
   viewport.setAttribute("aria-label", `Visualizzatore 3D di ${product.name}`);
   viewport.classList.add("viewer-viewport--loading");
@@ -190,7 +191,7 @@ export async function openModelViewer(product) {
       const unitFactor = unitFactors[product.inspection?.unit ?? "millimeter"];
       if (!unitFactor) throw new Error("Unita 3MF non supportata.");
       loadedObject.scale.setScalar(unitFactor);
-      const orangeMaterial = new THREE.MeshStandardMaterial({ color: 0xff6534, roughness: 0.72, metalness: 0.02, flatShading: true });
+      const orangeMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
       loadedObject.traverse((child) => {
         if (child.isMesh) {
           child.material = orangeMaterial;
@@ -201,7 +202,7 @@ export async function openModelViewer(product) {
       geometry.computeVertexNormals();
       loadedObject = new THREE.Mesh(
         geometry,
-        new THREE.MeshStandardMaterial({ color: 0xff6534, roughness: 0.72, metalness: 0.02, flatShading: true }),
+        new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true }),
       );
     }
     if (currentLoad !== loadVersion) {

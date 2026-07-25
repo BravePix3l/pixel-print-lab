@@ -77,8 +77,6 @@ const customColorOptions = document.querySelector("#custom-color-options");
 const customQuantityInput = document.querySelector("#custom-quantity");
 const customSubmitButton = document.querySelector("#custom-submit");
 const customFeedback = document.querySelector("#custom-feedback");
-const menuToggle = document.querySelector("#menu-toggle");
-const mainNavigation = document.querySelector("#main-navigation");
 const catalogScrollIndicator = document.querySelector("#catalog-scroll-indicator");
 const MAX_MODEL_FILE_SIZE = 50 * 1024 * 1024;
 const euroFormatter = new Intl.NumberFormat("it-IT", {
@@ -145,6 +143,7 @@ function createColorOption(color, groupName, selected) {
   input.required = true;
   swatch.className = "color-option__swatch";
   swatch.style.backgroundColor = color.hexValue;
+  name.className = "color-option__name";
   name.textContent = color.name;
 
   label.append(input, swatch, name);
@@ -191,7 +190,9 @@ function createProductCard(product, index) {
       viewModelButton.textContent = "...";
       try {
         const { openModelViewer } = await getViewerModule();
-        await openModelViewer(product);
+        const selectedColorId = Number(new FormData(form).get(`product-${product.id}-color`));
+        const selectedColor = colorsById.get(selectedColorId);
+        await openModelViewer(product, selectedColor?.hexValue ?? "#ffffff");
       } catch (error) {
         console.error(error);
         feedback.textContent = "Impossibile aprire il modello 3D.";
@@ -257,7 +258,7 @@ function createCartItem(item) {
       viewButton.addEventListener("click", async () => {
         try {
           const { openModelViewer } = await getViewerModule();
-          await openModelViewer(item);
+          await openModelViewer(item, color?.hexValue ?? "#ffffff");
         } catch (error) {
           console.error(error);
         }
@@ -632,18 +633,21 @@ customPreviewButton.addEventListener("click", async () => {
   try {
     const file = validateSelectedFile();
     const { openModelViewer } = await getViewerModule();
+    const customColorId = Number(customForm.elements.namedItem("custom-color").value);
+    const customColor = colorsById.get(customColorId);
+    const colorHex = customColor?.hexValue ?? "#ffffff";
     if (selectedModelFormat(file) === "3mf") {
       customPreviewButton.disabled = true;
       customFeedback.textContent = "Controllo del progetto 3MF...";
       inspectedUpload = await inspectedModelFor(file);
-      await openModelViewer(inspectedUpload);
+      await openModelViewer(inspectedUpload, colorHex);
       const compatibility = inspectedUpload.inspection?.compatibility;
       customFeedback.textContent = compatibility?.status === "incompatible"
         ? compatibility.warnings[0]?.message ?? "Il progetto supera il volume della stampante."
         : "Primo piatto pronto e compreso nel volume standard.";
     } else {
       objectUrl = URL.createObjectURL(file);
-      await openModelViewer({ name: file.name, modelUrl: objectUrl, modelFormat: "stl" });
+      await openModelViewer({ name: file.name, modelUrl: objectUrl, modelFormat: "stl" }, colorHex);
     }
   } catch (error) {
     customFeedback.textContent = error.message;
@@ -996,22 +1000,6 @@ accountPasswordForm.addEventListener("submit", async (event) => {
 });
 
 accountOrdersRefresh.addEventListener("click", loadAccountOrders);
-
-if (menuToggle && mainNavigation) {
-  menuToggle.addEventListener("click", () => {
-    const expanded = menuToggle.getAttribute("aria-expanded") === "true";
-    menuToggle.setAttribute("aria-expanded", String(!expanded));
-    menuToggle.setAttribute("aria-label", expanded ? "Menu" : "Chiudi menu");
-    mainNavigation.classList.toggle("nav--open");
-  });
-  mainNavigation.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", () => {
-      menuToggle.setAttribute("aria-expanded", "false");
-      menuToggle.setAttribute("aria-label", "Menu");
-      mainNavigation.classList.remove("nav--open");
-    });
-  });
-}
 
 if (productList && catalogScrollIndicator) {
   productList.addEventListener("scroll", updateCatalogIndicator, { passive: true });
