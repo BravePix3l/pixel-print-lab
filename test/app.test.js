@@ -152,6 +152,10 @@ test("serve la pagina pubblica con un catalogo accessibile", async () => {
   const page = await response.text();
 
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.match(response.headers.get("content-security-policy"), /default-src 'self'/);
+  assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
   assert.match(page, /<html lang="it">/);
   assert.match(page, /<main id="contenuto">/);
   assert.match(page, /<h1 id="titolo-principale">/);

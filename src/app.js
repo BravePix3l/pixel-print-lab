@@ -37,6 +37,19 @@ export function createApp({
   const auth = createAuthService({ database, adminUsername, adminPassword });
 
   app.disable("x-powered-by");
+  app.use((request, response, next) => {
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader("X-Frame-Options", "DENY");
+    response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    response.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    );
+    if (request.secure) {
+      response.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+    }
+    next();
+  });
   if (trustProxy) app.set("trust proxy", 1);
   app.use(express.json({ limit: "1mb" }));
   registerCatalogAssetServing(app, catalogDirectory);
