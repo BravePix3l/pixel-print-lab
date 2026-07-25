@@ -87,12 +87,17 @@
                   <img width="640" height="480" data-field="image">
                   <button class="product-card__view" data-field="view-model" type="button">Apri 3D</button>
                 </div>
-                <div class="product-card__body">
+                <div class="product-card__summary">
                   <div>
                     <p class="product-card__type" data-field="category"></p>
                     <h3 data-field="name"></h3>
                   </div>
                   <p class="product-card__price"><data data-field="price"></data></p>
+                  <button class="product-card__details-toggle" data-field="details-toggle" type="button" aria-expanded="false">
+                    Dettagli <span aria-hidden="true">+</span>
+                  </button>
+                </div>
+                <div class="product-card__body" data-field="details-body">
                   <p class="product-card__description" data-field="description"></p>
                   <dl class="product-card__specs">
                     <div><dt data-field="dimension-label"></dt><dd data-field="dimension-value"></dd></div>

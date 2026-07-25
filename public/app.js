@@ -152,7 +152,6 @@ function createColorOption(color, groupName, selected) {
 function createProductCard(product, index) {
   const card = productTemplate.content.firstElementChild.cloneNode(true);
   const image = card.querySelector('[data-field="image"]');
-  const price = card.querySelector('[data-field="price"]');
   const form = card.querySelector('[data-field="config-form"]');
   const colorOptions = card.querySelector('[data-field="color-options"]');
   const quantityInput = card.querySelector('[data-field="quantity"]');
@@ -174,8 +173,10 @@ function createProductCard(product, index) {
 
   image.src = product.imageUrl;
   image.alt = product.imageAlt;
-  price.value = (product.priceCents / 100).toFixed(2);
-  price.textContent = euroFormatter.format(product.priceCents / 100);
+  card.querySelectorAll('[data-field="price"]').forEach((priceEl) => {
+    priceEl.value = (product.priceCents / 100).toFixed(2);
+    priceEl.textContent = euroFormatter.format(product.priceCents / 100);
+  });
   colors.forEach((color, colorIndex) => {
     colorOptions.append(createColorOption(color, `product-${product.id}-color`, colorIndex === 0));
   });
@@ -216,6 +217,16 @@ function createProductCard(product, index) {
       ? "Quantita aggiornata nel carrello."
       : "Aggiunto al carrello."
   });
+
+  const detailsToggle = card.querySelector('[data-field="details-toggle"]');
+  if (detailsToggle) {
+    detailsToggle.addEventListener("click", () => {
+      const expanded = card.classList.toggle("is-expanded");
+      detailsToggle.setAttribute("aria-expanded", String(expanded));
+      detailsToggle.querySelector("span").textContent = expanded ? "-" : "+";
+      detailsToggle.childNodes[0].textContent = expanded ? "Chiudi " : "Dettagli ";
+    });
+  }
 
   return card;
 }
