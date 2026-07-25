@@ -2,6 +2,17 @@
 
 Le modifiche rilevanti del progetto sono raccolte in questo file.
 
+## [0.6.1] - 2026-07-24
+
+### Aggiunto
+
+- Cache-busting per gli asset pubblici (`styles.css`, `admin.css`, `app.js`, `admin.js`) tramite query string con la versione.
+- Effetto stripe animato sulla barra di completamento della stampante nella home.
+
+### Modificato
+
+- Testo della barra di progresso nella home: ora mostra `Livello <completati> / <totale>` invece di `<completati> / <pendenti>`.
+
 ## [0.6.0] - 2026-07-24
 
 ### Aggiunto
@@ -85,6 +96,7 @@ Le modifiche rilevanti del progetto sono raccolte in questo file.
 - Distribuzione self-hosted con Docker Compose e volumi persistenti.
 - Test automatici e build Docker tramite GitHub Actions.
 
+[0.6.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.4.1...v0.5.0
