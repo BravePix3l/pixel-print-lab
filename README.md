@@ -66,6 +66,14 @@ npm.cmd test
 
 Sono richiesti Docker Engine con Compose o Docker Desktop.
 
+Copia il file di esempio delle variabili d'ambiente:
+
+```sh
+cp .env.example .env
+```
+
+Modifica `.env` inserendo almeno `ADMIN_USERNAME` e `ADMIN_PASSWORD`, poi avvia:
+
 ```sh
 docker compose pull
 docker compose up -d

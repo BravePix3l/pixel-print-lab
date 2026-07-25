@@ -36,6 +36,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Create empty env file for validation
+        run: touch .env
+
       - name: Validate Compose
         run: docker compose config --quiet
 

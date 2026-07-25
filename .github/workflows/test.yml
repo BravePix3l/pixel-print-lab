@@ -38,6 +38,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create empty env file for validation
+        run: touch .env
+
       - name: Validate Compose
         run: docker compose config --quiet
 
