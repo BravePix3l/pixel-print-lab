@@ -276,6 +276,10 @@ h1 em {
   gap: 1rem;
 }
 
+.hero__progress {
+  display: none;
+}
+
 .pixel-button--secondary {
   color: var(--ink);
   background: var(--paper);
@@ -2242,6 +2246,44 @@ h1 em {
 
   .hero__actions {
     display: none;
+  }
+
+  .hero__progress {
+    display: block;
+    margin-top: 2.5rem;
+  }
+
+  .hero-progress__bar {
+    height: 0.65rem;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+  }
+
+  .hero-progress__bar span {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background-color: var(--green);
+    background-image: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.15) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.15) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+    transition: width 0.4s ease-out;
+    animation: progress-stripes 1s linear infinite;
+  }
+
+  .hero__progress > p {
+    margin: 0.6rem 0 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
   }
 
   .print-scene__head,

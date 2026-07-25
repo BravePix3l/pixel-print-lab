@@ -63,6 +63,8 @@ const accountOrderTemplate = document.querySelector("#account-order-template");
 const printSceneScreen = document.querySelector("#print-scene-screen");
 const printSceneProgressText = document.querySelector("#print-scene-progress-text");
 const printSceneProgressBar = document.querySelector("#print-scene-progress-bar");
+const heroProgressBar = document.querySelector("#hero-progress-bar");
+const heroProgressText = document.querySelector("#hero-progress-text");
 const customForm = document.querySelector("#custom-model-form");
 const customSourceInputs = document.querySelectorAll('input[name="custom-source"]');
 const customFilePanel = document.querySelector("#custom-file-panel");
@@ -546,6 +548,13 @@ function updatePrintScene(orders) {
   printSceneScreen.textContent = printingOrder ? printingOrder.code : "STANDBY";
 }
 
+function updateHeroProgress(orders) {
+  const completed = orders.filter((order) => order.status === "completato").length;
+  const total = orders.length;
+  heroProgressText.textContent = orders.length ? `Ordini completati ${completed} / ${total}` : "Ordini completati 0 / 0";
+  heroProgressBar.style.width = orders.length ? `${(completed / total) * 100}%` : "0%";
+}
+
 async function loadPublicOrders() {
   const loadVersion = ++trackingLoadVersion;
   try {
@@ -571,6 +580,7 @@ async function loadPublicOrders() {
       requestList.append(item);
     });
     updatePrintScene(orders);
+    updateHeroProgress(orders);
     trackingAnnouncement.textContent = hadPreviousData ? "Lo stato degli ordini e stato aggiornato." : "Elenco ordini caricato.";
   } catch (error) {
     if (loadVersion !== trackingLoadVersion) return;
