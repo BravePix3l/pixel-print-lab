@@ -24,7 +24,7 @@
         <span>Pixel Print Lab</span>
       </a>
       <nav id="main-navigation" aria-label="Navigazione principale">
-        <a href="#stato-richieste">Stato</a>
+        <a href="#stato-ordini">Stato ordini</a>
         <a href="#catalogo">Catalogo</a>
         <a href="#modello-personale">Il tuo modello</a>
       </nav>
@@ -49,7 +49,7 @@
           <p class="hero__intro">Scegli un oggetto dal laboratorio oppure porta il tuo file. Io penso alla stampa, tu scegli colore e quantita.</p>
           <div class="hero__actions">
             <a class="pixel-button" href="#catalogo">Esplora i modelli <span aria-hidden="true">&darr;</span></a>
-            <a class="pixel-button pixel-button--secondary" href="#stato-richieste">Stato richieste <span aria-hidden="true">&darr;</span></a>
+            <a class="pixel-button pixel-button--secondary" href="#stato-ordini">Stato ordini <span aria-hidden="true">&darr;</span></a>
           </div>
         </div>
 
@@ -120,11 +120,11 @@
             </template>
           </div>
 
-          <aside class="request-tracker" id="stato-richieste" aria-labelledby="tracking-title">
+          <aside class="request-tracker" id="stato-ordini" aria-labelledby="tracking-title">
             <p class="section-number">02 / Coda</p>
-            <h2 id="tracking-title">Stato richieste</h2>
+            <h2 id="tracking-title">Stato ordini</h2>
             <p class="request-tracker__intro">Codici pubblici e avanzamento, senza dati personali.</p>
-            <p class="request-tracker__status" id="tracking-status" role="status">Caricamento richieste...</p>
+            <p class="request-tracker__status" id="tracking-status" role="status">Caricamento ordini...</p>
             <p class="visually-hidden" id="tracking-announcement" aria-live="polite"></p>
             <ol class="request-list" id="request-list"></ol>
           </aside>
@@ -187,7 +187,7 @@
             <input id="custom-quantity" type="number" min="1" max="99" value="1" inputmode="numeric" required>
           </label>
 
-          <button class="add-button custom-submit" id="custom-submit" type="submit" disabled>Aggiungi richiesta al carrello</button>
+          <button class="add-button custom-submit" id="custom-submit" type="submit" disabled>Aggiungi al carrello</button>
           <p class="custom-feedback" id="custom-feedback" role="status"></p>
         </form>
       </section>
@@ -195,7 +195,7 @@
 
     <footer class="site-footer">
       <p>Pixel Print Lab <span aria-hidden="true">/</span> Stampe 3D tra amici</p>
-      <p>Progetto locale <span aria-hidden="true">[tracking richieste]</span></p>
+      <p>Progetto locale <span aria-hidden="true">[tracking ordini]</span></p>
     </footer>
 
     <dialog class="cart-dialog" id="cart-dialog" aria-labelledby="cart-title">
@@ -336,7 +336,7 @@
         </header>
 
         <div id="account-guest-view">
-          <p class="account-intro">Ordina pure come ospite oppure accedi per conservare lo storico delle tue richieste.</p>
+          <p class="account-intro">Ordina pure come ospite oppure accedi per conservare lo storico dei tuoi ordini.</p>
           <div class="account-access-grid">
             <form class="account-form" id="account-login-form">
               <h3>Accedi</h3>

@@ -2293,6 +2293,54 @@ h1 em {
     width: 100%;
   }
 
+  .print-scene {
+    display: none;
+  }
+
+  .custom-model__intro {
+    display: none;
+  }
+
+  .custom-form {
+    gap: 0;
+  }
+
+  .custom-form:not(.is-expanded) .custom-source-panel,
+  .custom-form:not(.is-expanded) .custom-colors,
+  .custom-form:not(.is-expanded) .custom-quantity,
+  .custom-form:not(.is-expanded) .custom-submit,
+  .custom-form:not(.is-expanded) .custom-feedback {
+    display: none;
+  }
+
+  .custom-form.is-expanded {
+    gap: 1.25rem;
+  }
+
+  .custom-form.is-expanded .custom-source-panel,
+  .custom-form.is-expanded .custom-colors,
+  .custom-form.is-expanded .custom-quantity,
+  .custom-form.is-expanded .custom-submit,
+  .custom-form.is-expanded .custom-feedback {
+    display: block;
+  }
+
+  .source-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .source-selector legend {
+    margin-bottom: 0;
+  }
+
+  .source-selector label {
+    padding: 1.5rem 1rem;
+    justify-content: center;
+    text-align: center;
+  }
+
   .site-footer {
     padding: 1.5rem 0;
     align-items: flex-start;

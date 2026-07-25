@@ -161,11 +161,11 @@ test("serve la pagina pubblica con un catalogo accessibile", async () => {
   assert.match(page, /<h1 id="titolo-principale">/);
   assert.match(page, /Vai al contenuto/);
   assert.match(page, /id="product-list"/);
-  assert.match(page, /id="stato-richieste"/);
+  assert.match(page, /id="stato-ordini"/);
   assert.match(page, /id="request-list"/);
   assert.match(page, /id="request-template"/);
-  assert.match(page, /href="#stato-richieste"/);
-  assert.ok(page.indexOf('id="product-list"') < page.indexOf('id="stato-richieste"'));
+  assert.match(page, /href="#stato-ordini"/);
+  assert.ok(page.indexOf('id="product-list"') < page.indexOf('id="stato-ordini"'));
   assert.match(page, /id="product-template"/);
   assert.match(page, /id="cart-dialog"/);
   assert.match(page, /id="cart-item-template"/);

@@ -563,12 +563,12 @@ async function loadPublicOrders() {
       requestList.append(item);
     });
     updatePrintScene(orders);
-    trackingAnnouncement.textContent = hadPreviousData ? "Lo stato delle richieste e stato aggiornato." : "Elenco richieste caricato.";
+    trackingAnnouncement.textContent = hadPreviousData ? "Lo stato degli ordini e stato aggiornato." : "Elenco ordini caricato.";
   } catch (error) {
     if (loadVersion !== trackingLoadVersion) return;
     console.error(error);
     trackingStatus.hidden = false;
-    trackingStatus.textContent = "Stato richieste non disponibile.";
+    trackingStatus.textContent = "Stato ordini non disponibile.";
     trackingStatus.classList.add("request-tracker__status--error");
   }
 }
@@ -590,7 +590,10 @@ async function reconcileUploadedFiles(items) {
   return items.filter((_item, index) => checks[index]);
 }
 
-customSourceInputs.forEach((input) => input.addEventListener("change", updateCustomSource));
+customSourceInputs.forEach((input) => input.addEventListener("change", () => {
+  updateCustomSource();
+  customForm.classList.add("is-expanded");
+}));
 
 customFileInput.addEventListener("change", () => {
   discardInspectedUpload();
@@ -682,7 +685,7 @@ customForm.addEventListener("submit", async (event) => {
     customFeedback.classList.add("custom-feedback--error");
   } finally {
     customSubmitButton.disabled = colors.length === 0;
-    customSubmitButton.textContent = "Aggiungi richiesta al carrello";
+    customSubmitButton.textContent = "Aggiungi al carrello";
   }
 });
 
