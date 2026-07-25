@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.8] - 2026-07-25
+
+### Changed
+
+- Renamed the public “Stato richieste” section to “Stato ordini” across navigation, headings, footer, and dynamic status messages.
+- Collapsed the custom model form on mobile: only the two source buttons are visible initially; the rest expands after selection.
+- Removed the 3D printer animation from the mobile hero section.
+
+### Fixed
+
+- Updated the public page test to match the new `stato-ordini` identifier.
+
 ## [0.6.7] - 2026-07-25
 
 ### Changed
