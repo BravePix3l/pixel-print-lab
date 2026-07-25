@@ -182,12 +182,11 @@ function createProductCard(product, index) {
   });
 
   if (!product.modelUrl) {
-    viewModelButton.disabled = true;
-    viewModelButton.textContent = "3D non disponibile";
+    viewModelButton.hidden = true;
   } else {
     viewModelButton.addEventListener("click", async () => {
       viewModelButton.disabled = true;
-      viewModelButton.textContent = "Caricamento...";
+      viewModelButton.textContent = "...";
       try {
         const { openModelViewer } = await getViewerModule();
         await openModelViewer(product);
@@ -196,7 +195,7 @@ function createProductCard(product, index) {
         feedback.textContent = "Impossibile aprire il modello 3D.";
       } finally {
         viewModelButton.disabled = false;
-        viewModelButton.textContent = "Apri 3D";
+        viewModelButton.textContent = "3D";
       }
     });
   }

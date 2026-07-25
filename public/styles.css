@@ -662,6 +662,7 @@ h1 em {
 .product-card__code {
   top: 1rem;
   left: 1rem;
+  display: none;
 }
 
 .product-card__view {
@@ -669,6 +670,12 @@ h1 em {
   bottom: 1rem;
   border: 0;
   font: inherit;
+  animation: 3d-logo-pulse 1.2s steps(2, jump-none) infinite;
+}
+
+@keyframes 3d-logo-pulse {
+  0%, 100% { color: var(--paper); box-shadow: 0 0 0 var(--orange); }
+  50% { color: var(--orange); box-shadow: 3px 3px 0 var(--orange); }
 }
 
 .product-card__view:not(:disabled):hover,
