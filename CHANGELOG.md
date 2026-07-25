@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.4] - 2026-07-24
+
+### Changed
+
+- Translated README, CHANGELOG, CONTRIBUTING, CODE_OF_CONDUCT, and SECURITY to English.
+- Translated comments and placeholder values in `compose.yml`, `compose.cloudflare.yml`, and `.env.cloudflare.example` to English.
+
+### Fixed
+
+- Added Docker build context to `compose.yml` and a stub `.env` file in CI workflows to fix `Test / docker` and release failures.
+
 ## [0.6.3] - 2026-07-24
 
 ### Changed
@@ -119,6 +130,7 @@ All notable changes to this project are documented in this file.
 - Self-hosted distribution with Docker Compose and persistent volumes.
 - Automated tests and Docker build via GitHub Actions.
 
+[0.6.4]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.0...v0.6.1
