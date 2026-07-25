@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.6] - 2026-07-25
+
+### Added
+
+- Mobile product card details toggle: only image, name, and price are visible by default; tapping "Dettagli" expands description, specs, color, quantity, and add-to-cart.
+
+### Changed
+
+- Hidden secondary/explanatory texts on mobile: hero intro, catalog description, request tracker intro, custom model description, field hints, cart/checkout notes, account intro, registration hint, and password-change hint.
+
 ## [0.6.5] - 2026-07-25
 
 ### Added
