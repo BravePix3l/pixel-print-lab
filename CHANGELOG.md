@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.9] - 2026-07-25
+
+### Added
+
+- Mobile-only hero progress bar showing completed public orders with an animated striped fill, replacing the removed 3D printer animation on narrow screens.
+
 ## [0.6.8] - 2026-07-25
 
 ### Changed
