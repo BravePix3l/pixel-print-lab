@@ -147,9 +147,6 @@ docker compose up -d
 
 ## Documentazione
 
-- [`docs/ROADMAP.md`](docs/ROADMAP.md): Kanban e avanzamento.
-- [`docs/ARCHITETTURA.md`](docs/ARCHITETTURA.md): schema grafico, componenti e flussi.
-- [`docs/guida-progetto.md`](docs/guida-progetto.md): guida tecnica progressiva.
 - [`CHANGELOG.md`](CHANGELOG.md): modifiche incluse nelle versioni pubblicate.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): come contribuire.
 - [`SECURITY.md`](SECURITY.md): come segnalare problemi di sicurezza.
