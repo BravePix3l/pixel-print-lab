@@ -2,6 +2,13 @@
 
 Le modifiche rilevanti del progetto sono raccolte in questo file.
 
+## [0.6.2] - 2026-07-24
+
+### Aggiunto
+
+- Header di sicurezza HTTP: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` e `Strict-Transport-Security` (quando la connessione e HTTPS).
+- Content Security Policy (CSP) di base per limitare il caricamento di risorse esterne e mitigare rischi XSS.
+
 ## [0.6.1] - 2026-07-24
 
 ### Aggiunto
@@ -96,6 +103,7 @@ Le modifiche rilevanti del progetto sono raccolte in questo file.
 - Distribuzione self-hosted con Docker Compose e volumi persistenti.
 - Test automatici e build Docker tramite GitHub Actions.
 
+[0.6.2]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.5.0...v0.5.1
