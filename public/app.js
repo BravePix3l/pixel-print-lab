@@ -132,21 +132,20 @@ function createColorOption(color, groupName, selected) {
   const label = document.createElement("label");
   const input = document.createElement("input");
   const swatch = document.createElement("span");
-  const name = document.createElement("span");
 
   label.className = "color-option";
+  label.title = color.name;
   input.type = "radio";
   input.name = groupName;
   input.value = color.id;
   input.checked = selected;
   input.defaultChecked = selected;
   input.required = true;
+  input.setAttribute("aria-label", color.name);
   swatch.className = "color-option__swatch";
   swatch.style.backgroundColor = color.hexValue;
-  name.className = "color-option__name";
-  name.textContent = color.name;
 
-  label.append(input, swatch, name);
+  label.append(input, swatch);
   return label;
 }
 
@@ -192,7 +191,7 @@ function createProductCard(product, index) {
         const { openModelViewer } = await getViewerModule();
         const selectedColorId = Number(new FormData(form).get(`product-${product.id}-color`));
         const selectedColor = colorsById.get(selectedColorId);
-        await openModelViewer(product, selectedColor?.hexValue ?? "#ffffff");
+        await openModelViewer(product, selectedColor?.hexValue ?? "#ffffff", colors);
       } catch (error) {
         console.error(error);
         feedback.textContent = "Impossibile aprire il modello 3D.";
@@ -258,7 +257,7 @@ function createCartItem(item) {
       viewButton.addEventListener("click", async () => {
         try {
           const { openModelViewer } = await getViewerModule();
-          await openModelViewer(item, color?.hexValue ?? "#ffffff");
+          await openModelViewer(item, color?.hexValue ?? "#ffffff", colors);
         } catch (error) {
           console.error(error);
         }
@@ -640,14 +639,14 @@ customPreviewButton.addEventListener("click", async () => {
       customPreviewButton.disabled = true;
       customFeedback.textContent = "Controllo del progetto 3MF...";
       inspectedUpload = await inspectedModelFor(file);
-      await openModelViewer(inspectedUpload, colorHex);
+      await openModelViewer(inspectedUpload, colorHex, colors);
       const compatibility = inspectedUpload.inspection?.compatibility;
       customFeedback.textContent = compatibility?.status === "incompatible"
         ? compatibility.warnings[0]?.message ?? "Il progetto supera il volume della stampante."
         : "Primo piatto pronto e compreso nel volume standard.";
     } else {
       objectUrl = URL.createObjectURL(file);
-      await openModelViewer({ name: file.name, modelUrl: objectUrl, modelFormat: "stl" }, colorHex);
+      await openModelViewer({ name: file.name, modelUrl: objectUrl, modelFormat: "stl" }, colorHex, colors);
     }
   } catch (error) {
     customFeedback.textContent = error.message;

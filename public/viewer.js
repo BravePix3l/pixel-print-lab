@@ -18,6 +18,8 @@ let camera;
 let controls;
 let model;
 let grid;
+const colorOptionsContainer = document.querySelector("#viewer-color-options");
+let currentMaterial;
 let resizeObserver;
 let loadVersion = 0;
 let initialCameraPosition;
@@ -150,10 +152,36 @@ function startRendering() {
   });
 }
 
-export async function openModelViewer(product, colorHex = "#ffffff") {
+function createViewerColorOption(color, groupName, selected) {
+  const label = document.createElement("label");
+  const input = document.createElement("input");
+  const swatch = document.createElement("span");
+
+  label.className = "color-option";
+  label.title = color.name;
+  input.type = "radio";
+  input.name = groupName;
+  input.value = color.id;
+  input.checked = selected;
+  input.defaultChecked = selected;
+  input.setAttribute("aria-label", color.name);
+  swatch.className = "color-option__swatch";
+  swatch.style.backgroundColor = color.hexValue;
+
+  label.append(input, swatch);
+  input.addEventListener("change", () => {
+    if (currentMaterial) {
+      currentMaterial.color.setHex(Number.parseInt(color.hexValue.replace("#", ""), 16));
+    }
+  });
+  return label;
+}
+
+export async function openModelViewer(product, colorHex = "#ffffff", availableColors = []) {
   initializeViewer();
   const currentLoad = ++loadVersion;
   clearModel();
+  currentMaterial = undefined;
   const modelColor = Number.parseInt(colorHex.replace("#", ""), 16);
   title.textContent = product.name;
   viewport.setAttribute("aria-label", `Visualizzatore 3D di ${product.name}`);
@@ -161,6 +189,14 @@ export async function openModelViewer(product, colorHex = "#ffffff") {
   status.hidden = false;
   status.textContent = "Caricamento modello...";
   resetButton.disabled = true;
+
+  colorOptionsContainer.replaceChildren();
+  const normalizedHex = colorHex.toLowerCase();
+  let selectedIndex = availableColors.findIndex((color) => color.hexValue.toLowerCase() === normalizedHex);
+  if (selectedIndex === -1) selectedIndex = 0;
+  availableColors.forEach((color, index) => {
+    colorOptionsContainer.append(createViewerColorOption(color, "viewer-color", index === selectedIndex));
+  });
 
   if (!dialog.open) {
     dialog.showModal();
@@ -191,19 +227,17 @@ export async function openModelViewer(product, colorHex = "#ffffff") {
       const unitFactor = unitFactors[product.inspection?.unit ?? "millimeter"];
       if (!unitFactor) throw new Error("Unita 3MF non supportata.");
       loadedObject.scale.setScalar(unitFactor);
-      const orangeMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
+      currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
       loadedObject.traverse((child) => {
         if (child.isMesh) {
-          child.material = orangeMaterial;
+          child.material = currentMaterial;
         }
       });
     } else {
       const geometry = await stlLoader.loadAsync(product.modelUrl);
       geometry.computeVertexNormals();
-      loadedObject = new THREE.Mesh(
-        geometry,
-        new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true }),
-      );
+      currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
+      loadedObject = new THREE.Mesh(geometry, currentMaterial);
     }
     if (currentLoad !== loadVersion) {
       disposeObject(loadedObject);
