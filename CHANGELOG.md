@@ -2,6 +2,22 @@
 
 Le modifiche rilevanti del progetto sono raccolte in questo file.
 
+## [0.6.3] - 2026-07-24
+
+### Modificato
+
+- Rifatto `README.md` con struttura piu curata, screenshot e indice.
+- Aggiornati `compose.yml` e `compose.cloudflare.yml` per caricare le variabili d'ambiente da `.env` tramite `env_file`.
+
+### Aggiunto
+
+- Cartella `screenshots/` con le immagini della home e della Control Room.
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` e `SECURITY.md`.
+
+### Rimosso
+
+- Cartella `docs/` locale e relativi riferimenti dal `README.md`.
+
 ## [0.6.2] - 2026-07-24
 
 ### Aggiunto
@@ -103,6 +119,7 @@ Le modifiche rilevanti del progetto sono raccolte in questo file.
 - Distribuzione self-hosted con Docker Compose e volumi persistenti.
 - Test automatici e build Docker tramite GitHub Actions.
 
+[0.6.3]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/Moffoletta/pixel-print-lab/compare/v0.5.1...v0.6.0
