@@ -4,39 +4,41 @@
 [![Release](https://img.shields.io/github/v/release/Moffoletta/pixel-print-lab)](https://github.com/Moffoletta/pixel-print-lab/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Applicazione personale per raccogliere richieste di stampa 3D.**  
-Gli amici possono scegliere un modello dal catalogo o caricare un file STL/3MF, selezionare colore e quantita, e inviare una richiesta. Tu gestisci tutto dalla Control Room.
+**A personal app for collecting 3D print requests.**  
+Friends can pick a model from the catalog or upload an STL/3MF file, choose color and quantity, and submit a request. You manage everything from the Control Room.
 
-![Home di Pixel Print Lab](screenshots/home.png)
+> **Note:** this repository page and documentation are in English, but the application interface is currently available only in Italian.
 
-## Indice
+![Pixel Print Lab home page](screenshots/home.png)
 
-- [Caratteristiche](#caratteristiche)
-- [Screenshot](#screenshot)
+## Table of contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
 - [Quick start](#quick-start)
-- [Avvio con Docker](#avvio-con-docker)
-- [Configurazione](#configurazione)
-- [Persistenza e backup](#persistenza-e-backup)
-- [Pubblicazione con Cloudflare Tunnel](#pubblicazione-con-cloudflare-tunnel)
-- [API locali](#api-locali)
-- [Documentazione](#documentazione)
-- [Release e licenza](#release-e-licenza)
+- [Run with Docker](#run-with-docker)
+- [Configuration](#configuration)
+- [Persistence and backup](#persistence-and-backup)
+- [Publish with Cloudflare Tunnel](#publish-with-cloudflare-tunnel)
+- [Local API](#local-api)
+- [Documentation](#documentation)
+- [Release and license](#release-and-license)
 
-## Caratteristiche
+## Features
 
-- **Catalogo pubblico** con prodotti, colori e visualizzatore 3D per STL.
-- **Richieste ospiti o con account**: chi vuole puo ordinare subito, chi crea un account trova lo storico personale.
-- **Upload di modelli personali**: file STL o 3MF fino a 50 MB, oppure link esterni da piattaforme supportate.
-- **Tracking pubblico**: ogni richiesta ha un codice univoco e uno stato visibile a tutti (`in attesa`, `in lavorazione`, `completato`, `consegnato`).
-- **Control Room**: pannello amministrativo per gestire ordini, catalogo, colori e impostazioni.
-- **Notifiche email**: avviso opzionale a ogni nuovo ordine via SMTP.
-- **Sicurezza di base**: autenticazione con sessioni, rate limit, header di sicurezza e CSP.
+- **Public catalog** with products, colors, and a 3D viewer for STL models.
+- **Guest or account requests**: users can order immediately or create an account to keep a personal history.
+- **Custom model upload**: STL or 3MF files up to 50 MB, or supported external links.
+- **Public tracking**: every request gets a unique code and a visible status (`pending`, `in progress`, `completed`, `delivered`).
+- **Control Room**: admin panel for managing orders, catalog, colors, and settings.
+- **Email notifications**: optional SMTP alert for every new order.
+- **Basic security**: session-based authentication, rate limiting, security headers, and CSP.
 
-## Screenshot
+## Screenshots
 
-### Home pubblica
+### Public home
 
-![Home pubblica](screenshots/home.png)
+![Public home](screenshots/home.png)
 
 ### Control Room
 
@@ -44,7 +46,7 @@ Gli amici possono scegliere un modello dal catalogo o caricare un file STL/3MF, 
 
 ## Quick start
 
-Requisiti: Node.js 22+, npm, Git.
+Requirements: Node.js 22+, npm, Git.
 
 ```powershell
 npm.cmd install
@@ -52,27 +54,27 @@ npm.cmd run db:setup
 npm.cmd run dev
 ```
 
-Apri `http://localhost:3000`. Il pannello amministrativo e su `http://localhost:3000/admin.html`.
+Open `http://localhost:3000`. The admin panel is at `http://localhost:3000/admin.html`.
 
-Imposta `ADMIN_USERNAME` e `ADMIN_PASSWORD` nel file `.env` prima di accedere alla Control Room.
+Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in the local `.env` file before opening the Control Room.
 
-## Test
+## Tests
 
 ```powershell
 npm.cmd test
 ```
 
-## Avvio con Docker
+## Run with Docker
 
-Sono richiesti Docker Engine con Compose o Docker Desktop.
+Docker Engine with Compose or Docker Desktop is required.
 
-Copia il file di esempio delle variabili d'ambiente:
+Copy the example environment file:
 
 ```sh
 cp .env.example .env
 ```
 
-Modifica `.env` inserendo almeno `ADMIN_USERNAME` e `ADMIN_PASSWORD`, poi avvia:
+Edit `.env` and set at least `ADMIN_USERNAME` and `ADMIN_PASSWORD`, then start:
 
 ```sh
 docker compose pull
@@ -80,37 +82,37 @@ docker compose up -d
 docker compose ps
 ```
 
-Il primo avvio applica le migrazioni SQLite e inserisce il catalogo dimostrativo. L'applicazione e disponibile su `http://localhost:3000`.
+The first run applies SQLite migrations and inserts the demo catalog. The app is available at `http://localhost:3000`.
 
-### Configurazione
+## Configuration
 
-Copia `.env.example` in `.env` e compila le variabili necessarie. Il Compose carica automaticamente `.env` tramite `env_file`.
+The Compose file loads environment variables from `.env` via `env_file`.
 
-| Variabile | Valore predefinito | Uso |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| `ADMIN_USERNAME` | nessuno | Nome utente amministrativo iniziale |
-| `ADMIN_PASSWORD` | nessuno | Password amministrativa iniziale |
-| `TRUST_PROXY` | `false` | `true` dietro un reverse proxy HTTPS fidato |
-| `PORT` | `3000` | Porta interna del container |
-| `DATABASE_PATH` | `/app/data/pixel-print-lab.db` | Percorso SQLite nel container |
-| `UPLOAD_DIRECTORY` | `/app/storage/uploads` | Upload temporanei |
-| `ORDER_FILE_DIRECTORY` | `/app/storage/orders` | Modelli associati agli ordini |
-| `CATALOG_DIRECTORY` | `/app/storage/catalog` | Asset amministrativi del catalogo |
-| `SMTP_HOST` | vuoto | Host del server SMTP |
-| `SMTP_PORT` | `587` | Porta SMTP |
-| `SMTP_SECURE` | `false` | `true` per TLS diretto, normalmente sulla porta 465 |
-| `SMTP_USER` | vuoto | Utente SMTP facoltativo |
-| `SMTP_PASSWORD` | vuoto | Password SMTP, richiesta insieme all'utente |
-| `SMTP_FROM` | vuoto | Mittente delle notifiche |
-| `SMTP_TO` | vuoto | Destinatario delle notifiche ordine |
+| `ADMIN_USERNAME` | none | Initial admin username |
+| `ADMIN_PASSWORD` | none | Initial admin password |
+| `TRUST_PROXY` | `false` | Set to `true` behind a trusted HTTPS reverse proxy |
+| `PORT` | `3000` | Internal container port |
+| `DATABASE_PATH` | `/app/data/pixel-print-lab.db` | SQLite path inside the container |
+| `UPLOAD_DIRECTORY` | `/app/storage/uploads` | Temporary uploads |
+| `ORDER_FILE_DIRECTORY` | `/app/storage/orders` | Order model files |
+| `CATALOG_DIRECTORY` | `/app/storage/catalog` | Admin catalog assets |
+| `SMTP_HOST` | empty | SMTP server host |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_SECURE` | `false` | `true` for direct TLS, usually on port 465 |
+| `SMTP_USER` | empty | Optional SMTP user |
+| `SMTP_PASSWORD` | empty | SMTP password, required if user is set |
+| `SMTP_FROM` | empty | Notification sender |
+| `SMTP_TO` | empty | Order notification recipient |
 
-L'invio email e disattivato per impostazione predefinita. Dopo aver configurato SMTP, apri la Control Room, seleziona la rotella e attiva "Email nuovi ordini". Un errore SMTP viene registrato ma non annulla un ordine gia salvato.
+Email sending is disabled by default. After configuring SMTP, open the Control Room, click the settings gear, and enable "Email on new orders". An SMTP error is logged but does not cancel an already saved order.
 
-## Persistenza e backup
+## Persistence and backup
 
-I named volumes `pixel-print-lab-data` e `pixel-print-lab-storage` conservano database, ordini e asset. I dati persistono dopo `docker compose down` o la ricostruzione del container.
+Named volumes `pixel-print-lab-data` and `pixel-print-lab-storage` keep the database, orders, and assets. Data persists after `docker compose down` or container rebuild.
 
-Backup coerente:
+Consistent backup:
 
 ```sh
 docker compose stop
@@ -118,7 +120,7 @@ docker compose run --rm --no-deps --entrypoint tar app -czf - -C /app data stora
 docker compose start
 ```
 
-Per aggiornare:
+To update:
 
 ```sh
 git pull
@@ -126,41 +128,41 @@ docker compose pull
 docker compose up -d
 ```
 
-## Pubblicazione con Cloudflare Tunnel
+## Publish with Cloudflare Tunnel
 
-`compose.cloudflare.yml` pubblica l'applicazione tramite Cloudflare Tunnel senza esporre la porta 3000 sul NAS. `TRUST_PROXY` viene attivato automaticamente.
+`compose.cloudflare.yml` exposes the app through a Cloudflare Tunnel without publishing port 3000 on the NAS. `TRUST_PROXY` is enabled automatically.
 
-1. Aggiungi un dominio a Cloudflare e crea un tunnel.
-2. Configura un hostname pubblico HTTPS con servizio di origine `http://app:3000`.
-3. Copia `.env.cloudflare.example` in `.env`, inserisci credenziali amministrative e `TUNNEL_TOKEN`.
-4. Avvia:
+1. Add a domain to Cloudflare and create a tunnel.
+2. Configure a public HTTPS hostname with origin service `http://app:3000`.
+3. Copy `.env.cloudflare.example` to `.env`, set strong admin credentials, and fill `TUNNEL_TOKEN`.
+4. Start:
 
    ```sh
    docker compose -f compose.cloudflare.yml pull
    docker compose -f compose.cloudflare.yml up -d
    ```
 
-## API locali
+## Local API
 
-- `GET /api/products`: prodotti visibili.
-- `GET /api/products/:id`: dettaglio di un prodotto.
-- `GET /api/colors`: colori attivi.
-- `POST /api/custom-models/upload`: caricamento temporaneo e ispezione di un file STL o 3MF.
-- `POST /api/custom-models/link`: validazione di un link esterno.
-- `DELETE /api/custom-models/:id`: eliminazione di un upload temporaneo.
-- `POST /api/orders`: creazione di una richiesta persistente.
-- `GET /api/orders`: elenco pubblico limitato a codice richiesta e stato.
-- `/api/account/*`: registrazione, login, logout, sessione, storico personale e cambio password.
-- `/api/admin/*`: autenticazione e gestione protetta di richieste, prodotti, asset, colori, impostazioni e credenziali amministrative.
+- `GET /api/products`: visible products.
+- `GET /api/products/:id`: product detail.
+- `GET /api/colors`: active colors.
+- `POST /api/custom-models/upload`: temporary upload and inspection of an STL or 3MF file.
+- `POST /api/custom-models/link`: validation of an external link.
+- `DELETE /api/custom-models/:id`: delete a temporary upload.
+- `POST /api/orders`: create a persistent request.
+- `GET /api/orders`: public list limited to request code and status.
+- `/api/account/*`: registration, login, logout, session, personal history, and password change.
+- `/api/admin/*`: authentication and protected management of requests, products, assets, colors, settings, and admin credentials.
 
-## Documentazione
+## Documentation
 
-- [`CHANGELOG.md`](CHANGELOG.md): modifiche incluse nelle versioni pubblicate.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md): come contribuire.
-- [`SECURITY.md`](SECURITY.md): come segnalare problemi di sicurezza.
+- [`CHANGELOG.md`](CHANGELOG.md): changes included in each release.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): how to contribute.
+- [`SECURITY.md`](SECURITY.md): how to report security issues.
 
-## Release e licenza
+## Release and license
 
-Le versioni stabili sono pubblicate nella pagina [Releases](https://github.com/Moffoletta/pixel-print-lab/releases). I tag seguono il versionamento semantico e generano automaticamente l'immagine Docker su `ghcr.io/moffoletta/pixel-print-lab`.
+Stable releases are published on the [Releases](https://github.com/Moffoletta/pixel-print-lab/releases) page. Tags follow semantic versioning and automatically build the Docker image on `ghcr.io/moffoletta/pixel-print-lab`.
 
-Il progetto e distribuito con licenza [MIT](LICENSE).
+This project is distributed under the [MIT](LICENSE) license.

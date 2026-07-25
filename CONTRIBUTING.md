@@ -1,15 +1,15 @@
-# Contributi
+# Contributing
 
-Pixel Print Lab e un progetto personale. Non sono previste linee guida formali per i contributi esterni.
+Pixel Print Lab is a personal project. There are no formal contribution guidelines for external contributors.
 
-Se trovi un problema o vuoi proporre un miglioramento:
+If you find an issue or want to propose an improvement:
 
-1. Apri una issue descrivendo il problema o l'idea.
-2. Se vuoi proporre del codice, apri una pull request con una descrizione chiara delle modifiche.
-3. Assicurati che i test passino prima di richiedere la revisione:
+1. Open an issue describing the problem or idea.
+2. If you want to propose code changes, open a pull request with a clear description of the changes.
+3. Make sure tests pass before requesting a review:
 
    ```powershell
    npm.cmd test
    ```
 
-Per domande o chiarimenti, usa le issue del repository.
+For questions or clarifications, use the repository issues.

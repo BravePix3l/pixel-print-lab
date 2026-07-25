@@ -10,8 +10,8 @@ services:
     env_file:
       - .env
     environment:
-      ADMIN_USERNAME: "${ADMIN_USERNAME:?Impostare ADMIN_USERNAME nel file .env}"
-      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Impostare ADMIN_PASSWORD nel file .env}"
+      ADMIN_USERNAME: "${ADMIN_USERNAME:?Set ADMIN_USERNAME in the .env file}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in the .env file}"
       TRUST_PROXY: "true"
 
   cloudflared:
@@ -21,7 +21,7 @@ services:
       - app
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: "${TUNNEL_TOKEN:?Impostare TUNNEL_TOKEN nel file .env}"
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in the .env file}"
 
 volumes:
   pixel-print-lab-data:

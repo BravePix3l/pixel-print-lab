@@ -1,19 +1,19 @@
-# Sicurezza
+# Security
 
-Se scopri una vulnerabilita nel progetto, ti chiedo di segnalarla in modo responsabile.
+If you discover a vulnerability in this project, please report it responsibly.
 
-## Come segnalare
+## How to report
 
-1. Non aprire una issue pubblica per descrivere la vulnerabilita.
-2. Contatta l'autore del progetto privatamente, se possibile.
-3. Fornisci una descriva chiara del problema, i passi per riprodurlo e l'eventuale impatto.
+1. Do not open a public issue to describe the vulnerability.
+2. Contact the project author privately if possible.
+3. Provide a clear description of the issue, steps to reproduce it, and the potential impact.
 
-## Cosa fare dopo la segnalazione
+## What happens after reporting
 
-- Verra analizzata e confermata al piu presto.
-- Se accettata, verra corretta e rilasciata una nuova versione.
-- Verrai informato quando il problema sara risolto.
+- It will be analyzed and confirmed as soon as possible.
+- If accepted, a fix will be released in a new version.
+- You will be informed when the issue is resolved.
 
-## Versioni supportate
+## Supported versions
 
-Vengono supportate con aggiornamenti di sicurezza solo le versioni indicate nella pagina [Releases](https://github.com/Moffoletta/pixel-print-lab/releases).
+Only versions listed on the [Releases](https://github.com/Moffoletta/pixel-print-lab/releases) page receive security updates.

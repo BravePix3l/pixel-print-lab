@@ -25,10 +25,10 @@ services:
     #   SMTP_HOST: smtp.example.com
     #   SMTP_PORT: "587"
     #   SMTP_SECURE: "false"
-    #   SMTP_USER: utente-smtp
-    #   SMTP_PASSWORD: password-smtp
+    #   SMTP_USER: smtp-user
+    #   SMTP_PASSWORD: smtp-password
     #   SMTP_FROM: "Pixel Print Lab <noreply@example.com>"
-    #   SMTP_TO: ordini@example.com
+    #   SMTP_TO: orders@example.com
 
 volumes:
   pixel-print-lab-data:

@@ -1,11 +1,11 @@
-# Codice di condotta
+# Code of conduct
 
-Questo progetto e gestito in modo informale per uso personale. Si richiede semplicemente rispetto e cortesia nelle interazioni.
+This project is managed informally for personal use. The only expectation is respect and courtesy in all interactions.
 
-Comportamenti non accettabili:
+Unacceptable behavior:
 
-- Attacchi personali, insulti o linguaggio offensivo.
-- Spam, pubblicita o contenuti fuori tema.
-- Condivisione di informazioni private altrui senza consenso.
+- Personal attacks, insults, or offensive language.
+- Spam, advertising, or off-topic content.
+- Sharing private information about others without consent.
 
-In caso di comportamenti inappropriati, l'autore del progetto si riserva il diritto di rimuovere contributi o bloccare l'accesso.
+In case of inappropriate behavior, the project author reserves the right to remove contributions or block access.
