@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.5] - 2026-07-25
+
+### Added
+
+- Mobile hamburger menu for the main navigation.
+- Horizontal swipeable product catalog with scroll-snap and dot indicator on narrow screens.
+
+### Changed
+
+- Improved mobile readability: larger small text, looser headings, bigger touch targets, higher contrast for secondary text.
+- Product specs and order headers now stack vertically on mobile.
+- Dialog panels have extra bottom padding to avoid the on-screen keyboard.
+- Relaxed `body` minimum width to prevent forced horizontal scroll on very small viewports.
+
 ## [0.6.4] - 2026-07-24
 
 ### Changed

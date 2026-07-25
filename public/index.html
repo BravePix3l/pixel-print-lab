@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Scegli un modello o proponi il tuo file STL o 3MF per una stampa 3D.">
     <title>Pixel Print Lab | Stampe 3D</title>
-    <link rel="stylesheet" href="/styles.css?v=0.6.0">
+    <link rel="stylesheet" href="/styles.css?v=0.6.5">
     <script type="importmap">
       {
         "imports": {
@@ -23,7 +23,7 @@
         <span class="brand__mark" aria-hidden="true"></span>
         <span>Pixel Print Lab</span>
       </a>
-      <nav aria-label="Navigazione principale">
+      <nav id="main-navigation" aria-label="Navigazione principale">
         <a href="#stato-richieste">Stato</a>
         <a href="#catalogo">Catalogo</a>
         <a href="#modello-personale">Il tuo modello</a>
@@ -32,6 +32,11 @@
         <button class="account-status" id="account-open" type="button" aria-haspopup="dialog" aria-controls="account-dialog">Accedi</button>
         <button class="cart-status" id="cart-open" type="button" aria-haspopup="dialog" aria-controls="cart-dialog" aria-label="Apri il carrello, zero elementi" disabled>
           <span class="cart-bracket" aria-hidden="true">[</span> Carrello <span id="cart-count">00</span> <span class="cart-bracket" aria-hidden="true">]</span>
+        </button>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-navigation" aria-label="Menu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
         </button>
       </div>
     </header>
@@ -73,6 +78,7 @@
 
             <p class="catalog-status" id="catalog-status" role="status">Caricamento catalogo...</p>
             <div class="product-grid" id="product-list" aria-live="polite" aria-busy="true"></div>
+            <div class="catalog-scroll-indicator" id="catalog-scroll-indicator" aria-hidden="true" hidden></div>
 
             <template id="product-template">
               <article class="product-card">
@@ -399,6 +405,6 @@
       </article>
     </template>
 
-    <script type="module" src="/app.js?v=0.6.0"></script>
+    <script type="module" src="/app.js?v=0.6.5"></script>
   </body>
 </html>

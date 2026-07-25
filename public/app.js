@@ -75,6 +75,9 @@ const customColorOptions = document.querySelector("#custom-color-options");
 const customQuantityInput = document.querySelector("#custom-quantity");
 const customSubmitButton = document.querySelector("#custom-submit");
 const customFeedback = document.querySelector("#custom-feedback");
+const menuToggle = document.querySelector("#menu-toggle");
+const mainNavigation = document.querySelector("#main-navigation");
+const catalogScrollIndicator = document.querySelector("#catalog-scroll-indicator");
 const MAX_MODEL_FILE_SIZE = 50 * 1024 * 1024;
 const euroFormatter = new Intl.NumberFormat("it-IT", {
   style: "currency",
@@ -791,6 +794,35 @@ checkoutForm.addEventListener("submit", async (event) => {
   }
 });
 
+function updateCatalogIndicator() {
+  if (!catalogScrollIndicator || !productList) return;
+  const cards = productList.querySelectorAll(".product-card");
+  if (cards.length <= 1 || productList.scrollWidth <= productList.clientWidth) {
+    catalogScrollIndicator.hidden = true;
+    return;
+  }
+  catalogScrollIndicator.hidden = false;
+  const dots = catalogScrollIndicator.querySelectorAll("span");
+  if (dots.length !== cards.length) {
+    catalogScrollIndicator.innerHTML = "";
+    for (let i = 0; i < cards.length; i += 1) {
+      const dot = document.createElement("span");
+      dot.setAttribute("aria-hidden", "true");
+      catalogScrollIndicator.appendChild(dot);
+    }
+  }
+  const style = getComputedStyle(productList);
+  const gap = parseFloat(style.gap) || 0;
+  const cardWidth = cards[0].offsetWidth + gap;
+  const activeIndex = Math.min(
+    cards.length - 1,
+    Math.max(0, Math.round(productList.scrollLeft / cardWidth)),
+  );
+  catalogScrollIndicator.querySelectorAll("span").forEach((dot, index) => {
+    dot.classList.toggle("active", index === activeIndex);
+  });
+}
+
 async function loadCatalog() {
   try {
     const [productsResponse, colorsResponse] = await Promise.all([
@@ -831,6 +863,7 @@ async function loadCatalog() {
     products.forEach((product, index) => cards.append(createProductCard(product, index)));
     productList.append(cards);
     catalogStatus.hidden = true;
+    updateCatalogIndicator();
   } catch (error) {
     console.error(error);
     catalogStatus.textContent = "Catalogo non disponibile. Riprova tra poco.";
@@ -925,6 +958,30 @@ accountPasswordForm.addEventListener("submit", async (event) => {
 });
 
 accountOrdersRefresh.addEventListener("click", loadAccountOrders);
+
+if (menuToggle && mainNavigation) {
+  menuToggle.addEventListener("click", () => {
+    const expanded = menuToggle.getAttribute("aria-expanded") === "true";
+    menuToggle.setAttribute("aria-expanded", String(!expanded));
+    menuToggle.setAttribute("aria-label", expanded ? "Menu" : "Chiudi menu");
+    mainNavigation.classList.toggle("nav--open");
+  });
+  mainNavigation.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      menuToggle.setAttribute("aria-expanded", "false");
+      menuToggle.setAttribute("aria-label", "Menu");
+      mainNavigation.classList.remove("nav--open");
+    });
+  });
+}
+
+if (productList && catalogScrollIndicator) {
+  productList.addEventListener("scroll", updateCatalogIndicator, { passive: true });
+  window.addEventListener("resize", () => {
+    window.requestAnimationFrame(updateCatalogIndicator);
+  });
+}
+
 updateCustomSource();
 loadAccountSession();
 loadCatalog();
