@@ -33,17 +33,6 @@ Friends can pick a model from the catalog or upload an STL/3MF file, choose colo
 - **Control Room**: admin panel for managing orders, catalog, colors, and settings.
 - **Email notifications**: optional SMTP alert for every new order.
 - **Basic security**: session-based authentication, rate limiting, security headers, and CSP.
-
-## Screenshots
-
-### Public home
-
-![Public home](screenshots/home.png)
-
-### Control Room
-
-![Control Room](screenshots/control-room.png)
-
 ## Quick start
 
 Requirements: Node.js 22+, npm, Git.
