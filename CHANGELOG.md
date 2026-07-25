@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.7] - 2026-07-25
+
+### Changed
+
+- Hidden hero action buttons on mobile because the same links are available in the hamburger menu.
+
+### Fixed
+
+- Adjusted the 3D printer head animation so the extruder no longer intersects the growing printed object.
+- Restored a missing `@keyframes viewer-layer` definition used by the 3D viewer loader.
+
 ## [0.6.6] - 2026-07-25
 
 ### Added
