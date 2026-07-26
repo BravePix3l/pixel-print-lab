@@ -50,12 +50,6 @@ const accountDisplayName = document.querySelector("#account-display-name");
 const accountUsername = document.querySelector("#account-username");
 const accountAdminLink = document.querySelector("#account-admin-link");
 const accountLogoutButton = document.querySelector("#account-logout");
-const accountSettingsButton = document.querySelector("#account-settings");
-const accountSettingsPanel = document.querySelector("#account-settings-panel");
-const accountPasswordForm = document.querySelector("#account-password-form");
-const accountCurrentPassword = document.querySelector("#account-current-password");
-const accountNewPassword = document.querySelector("#account-new-password");
-const accountPasswordFeedback = document.querySelector("#account-password-feedback");
 const accountOrdersRefresh = document.querySelector("#account-orders-refresh");
 const accountOrdersStatus = document.querySelector("#account-orders-status");
 const accountOrderList = document.querySelector("#account-order-list");
@@ -967,48 +961,6 @@ accountLogoutButton.addEventListener("click", async () => {
     if (version === accountStateVersion) accountOrdersStatus.textContent = error.message;
   } finally {
     if (version === accountStateVersion) accountLogoutButton.disabled = false;
-  }
-});
-
-accountSettingsButton.addEventListener("click", () => {
-  accountSettingsPanel.hidden = !accountSettingsPanel.hidden;
-  if (!accountSettingsPanel.hidden) {
-    accountPasswordForm.reset();
-    accountPasswordFeedback.textContent = "";
-    accountPasswordFeedback.classList.remove("account-feedback--error");
-    accountCurrentPassword.focus();
-  }
-});
-
-accountPasswordForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const submitButton = accountPasswordForm.querySelector('[type="submit"]');
-  submitButton.disabled = true;
-  accountPasswordFeedback.textContent = "";
-  accountPasswordFeedback.classList.remove("account-feedback--error");
-  const version = ++accountStateVersion;
-  try {
-    await parseApiResponse(
-      await fetch("/api/account/password", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: accountCurrentPassword.value,
-          newPassword: accountNewPassword.value,
-        }),
-      }),
-    );
-    if (version !== accountStateVersion) return;
-    accountPasswordForm.reset();
-    accountPasswordFeedback.textContent = "Password aggiornata.";
-    accountSettingsPanel.hidden = true;
-  } catch (error) {
-    if (version === accountStateVersion) {
-      accountPasswordFeedback.textContent = error.message;
-      accountPasswordFeedback.classList.add("account-feedback--error");
-    }
-  } finally {
-    if (version === accountStateVersion) submitButton.disabled = false;
   }
 });
 

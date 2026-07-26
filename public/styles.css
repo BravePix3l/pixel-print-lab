@@ -1786,35 +1786,6 @@ h1 em {
   border: 2px solid var(--paper);
 }
 
-.account-profile__actions .account-settings-button {
-  width: 2.8rem;
-  padding: 0;
-  color: var(--paper);
-  background: var(--ink);
-  border: 2px solid var(--paper);
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.account-settings {
-  margin-bottom: 2rem;
-  padding: 1.25rem;
-  background: var(--panel);
-  border: 3px solid var(--ink);
-  box-shadow: 6px 6px 0 var(--blue);
-}
-
-.account-settings h3 {
-  margin-top: 0;
-}
-
-.account-settings-hint {
-  margin: 0 0 0.75rem;
-  color: var(--muted);
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
 .account-admin-link {
   display: inline-flex;
   align-items: center;
@@ -2575,8 +2546,7 @@ h1 em {
   .cart-summary > p,
   #checkout-customer-note,
   .account-intro,
-  .account-form > p,
-  .account-settings-hint {
+  .account-form > p {
     display: none;
   }
 }
