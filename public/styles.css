@@ -9,6 +9,7 @@
   --orange: #ff6534;
   --blue: #4277ff;
   --green: #2ba85b;
+  --yellow: #f5c518;
   --muted: #4f574f;
   --line: 4px solid var(--ink);
   --page: min(calc(100% - 2rem), 76rem);
@@ -187,6 +188,10 @@ button:disabled {
   background: var(--green);
   box-shadow: 3px 3px 0 var(--ink);
   animation: signal 1.2s steps(2, jump-none) infinite;
+}
+
+.kicker--busy span {
+  background: var(--yellow);
 }
 
 h1,

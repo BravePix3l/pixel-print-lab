@@ -65,6 +65,8 @@ const printSceneProgressText = document.querySelector("#print-scene-progress-tex
 const printSceneProgressBar = document.querySelector("#print-scene-progress-bar");
 const heroProgressBar = document.querySelector("#hero-progress-bar");
 const heroProgressText = document.querySelector("#hero-progress-text");
+const heroKicker = document.querySelector("#hero-kicker");
+const heroKickerPixel = heroKicker?.querySelector("span");
 const customForm = document.querySelector("#custom-model-form");
 const customSourceInputs = document.querySelectorAll('input[name="custom-source"]');
 const customFilePanel = document.querySelector("#custom-file-panel");
@@ -555,6 +557,17 @@ function updateHeroProgress(orders) {
   heroProgressBar.style.width = orders.length ? `${(completed / total) * 100}%` : "0%";
 }
 
+function updateHeroKicker(orders) {
+  const busy = orders.some((order) => order.status === "in_lavorazione");
+  if (busy) {
+    heroKicker.lastChild.textContent = " Stampante occupata";
+    heroKicker.classList.add("kicker--busy");
+  } else {
+    heroKicker.lastChild.textContent = " Stampante pronta";
+    heroKicker.classList.remove("kicker--busy");
+  }
+}
+
 async function loadPublicOrders() {
   const loadVersion = ++trackingLoadVersion;
   try {
@@ -581,6 +594,7 @@ async function loadPublicOrders() {
     });
     updatePrintScene(orders);
     updateHeroProgress(orders);
+    updateHeroKicker(orders);
     trackingAnnouncement.textContent = hadPreviousData ? "Lo stato degli ordini e stato aggiornato." : "Elenco ordini caricato.";
   } catch (error) {
     if (loadVersion !== trackingLoadVersion) return;
