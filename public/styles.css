@@ -2176,13 +2176,34 @@ h1 em {
   }
 
   .header-actions {
-    gap: 0;
+    gap: 0.5rem;
   }
 
   .account-status,
   .cart-status {
-    padding: 0.4rem;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.78rem;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--blue);
+  }
+
+  .cart-status {
+    box-shadow: 3px 3px 0 var(--orange);
+  }
+
+  #cart-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    margin-left: 0.3rem;
+    padding: 0 0.15rem;
     font-size: 0.65rem;
+    color: var(--paper);
+    background: var(--orange);
+    border: 2px solid var(--ink);
   }
 
   .hero {
