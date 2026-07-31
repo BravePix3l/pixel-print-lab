@@ -344,6 +344,18 @@ function renderColors() {
     form.querySelector('[data-field="down"]').disabled = index === colors.length - 1;
     form.querySelector('[data-field="up"]').addEventListener("click", () => moveColor(index, -1));
     form.querySelector('[data-field="down"]').addEventListener("click", () => moveColor(index, 1));
+    form.querySelector('[data-field="delete"]').addEventListener("click", async () => {
+      if (!confirm(`Rimuovere il colore "${color.name}"?`)) return;
+      try {
+        await api(`/api/admin/colors/${color.id}`, { method: "DELETE" });
+        await loadCatalog(selectedProductId, true);
+        colorFeedback.textContent = "Colore rimosso.";
+        colorFeedback.classList.remove("admin-feedback--error");
+      } catch (error) {
+        colorFeedback.textContent = error.message;
+        colorFeedback.classList.add("admin-feedback--error");
+      }
+    });
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       try {

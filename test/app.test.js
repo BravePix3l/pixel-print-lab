@@ -1181,6 +1181,10 @@ endsolid catalog`;
   assert.deepEqual(snapshotQuery.get(orderId), originalSnapshot);
   assert.equal((await fetch(`${baseUrl}/api/products/${created.id}`)).status, 404);
 
+  const blockedDelete = await adminFetch(`/api/admin/colors/${color.id}`, { method: "DELETE" });
+  assert.equal(blockedDelete.status, 409);
+  assert.equal((await blockedDelete.json()).error.code, "COLOR_IN_USE");
+
   const catalog = (await (await adminFetch("/api/admin/catalog")).json()).data;
   const reversedColorIds = catalog.colors.map(({ id }) => id).reverse();
   const reorderResponse = await adminFetch("/api/admin/colors/order", {
@@ -1211,7 +1215,9 @@ endsolid catalog`;
     body: JSON.stringify({ ids: catalog.colors.map(({ id }) => id) }),
   });
   database.prepare("DELETE FROM orders WHERE id = ?").run(orderId);
-  database.prepare("DELETE FROM colors WHERE id = ?").run(color.id);
+  const deleteColorResponse = await adminFetch(`/api/admin/colors/${color.id}`, { method: "DELETE" });
+  assert.equal(deleteColorResponse.status, 200);
+  assert.equal((await deleteColorResponse.json()).data.some((c) => c.id === color.id), false);
 });
 
 test("gestisce account, storico personale e accesso amministrativo unificato", async () => {

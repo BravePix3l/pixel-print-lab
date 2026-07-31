@@ -215,6 +215,8 @@ export function registerAdminRoutes(
     const updatePosition = database.prepare("UPDATE colors SET sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
     ids.forEach((id, index) => updatePosition.run((index + 1) * 10, id));
   });
+  const countColorUsage = database.prepare("SELECT COUNT(*) AS count FROM order_items WHERE color_id = ?");
+  const deleteColor = database.prepare("DELETE FROM colors WHERE id = ?");
   const updateOrderStatus = database.prepare(`
     UPDATE orders SET status = ? WHERE id = ?
   `);
@@ -384,6 +386,22 @@ export function registerAdminRoutes(
       }
       updateColor.run({ ...validateColor(request.body), id });
       return response.json({ data: serializeAdminColor(findAnyColor.get(id)) });
+    } catch (error) {
+      return sendError(response, error);
+    }
+  });
+
+  app.delete("/api/admin/colors/:id", requireAdmin, (request, response) => {
+    try {
+      const id = Number.parseInt(request.params.id, 10);
+      if (!Number.isInteger(id) || !findAnyColor.get(id)) {
+        throw new AdminError("COLOR_NOT_FOUND", "Colore non trovato.", 404);
+      }
+      if (countColorUsage.get(id).count > 0) {
+        throw new AdminError("COLOR_IN_USE", "Il colore e usato in uno o piu ordini e non puo essere rimosso.", 409);
+      }
+      deleteColor.run(id);
+      return response.json({ data: listAdminColors.all().map(serializeAdminColor) });
     } catch (error) {
       return sendError(response, error);
     }
