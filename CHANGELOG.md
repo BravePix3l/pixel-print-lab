@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.0] - 2026-08-02
+
+### Added
+
+- Account order history now shows item prices, row totals, and total order price using estimated or confirmed custom model prices.
+- MakerWorld link orders can move from pending pricing to confirmed pricing after the admin enters real slicer weight and time.
+
+### Fixed
+
+- Removed restrictive 3MF file picker filters that prevented selecting 3MF files on Safari mobile.
+
 ## [1.1.1] - 2026-08-02
 
 ### Fixed

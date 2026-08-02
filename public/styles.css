@@ -1982,6 +1982,10 @@ h1 em {
   text-align: right;
 }
 
+.account-order li span:first-child {
+  min-width: 0;
+}
+
 .account-order__total {
   padding-top: 0.8rem;
   font-size: 0.75rem;

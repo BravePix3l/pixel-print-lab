@@ -111,6 +111,13 @@ const publicStatusLabels = {
   consegnato: "Consegnato",
 };
 
+function priceStatusLabel(status) {
+  if (status === "confirmed") return "Confermato";
+  if (status === "estimated") return "Stimato";
+  if (status === "partial") return "Parziale";
+  return "Da definire";
+}
+
 function readCart() {
   try {
     return parseStoredCart(localStorage.getItem(CART_STORAGE_KEY));
@@ -461,7 +468,8 @@ function renderAccountOrders(orders) {
       : dateFormatter.format(date);
     element.querySelector('[data-field="account-order-code"]').textContent = order.code;
     element.querySelector('[data-field="account-order-status"]').textContent = publicStatusLabels[order.status] ?? order.status;
-    element.querySelector('[data-field="account-order-total"]').textContent = euroFormatter.format(order.catalogTotalCents / 100);
+    element.querySelector('[data-field="account-order-total-label"]').textContent = priceStatusLabel(order.priceStatus);
+    element.querySelector('[data-field="account-order-total"]').textContent = euroFormatter.format((order.totalPriceCents ?? order.catalogTotalCents) / 100);
     const deleteButton = element.querySelector('[data-field="account-order-delete"]');
     deleteButton.addEventListener("click", () => deleteAccountOrder(order.code));
     const itemList = element.querySelector('[data-field="account-order-items"]');
@@ -469,8 +477,14 @@ function renderAccountOrders(orders) {
       const listItem = document.createElement("li");
       const name = document.createElement("span");
       const detail = document.createElement("span");
+      const unitPrice = item.unitPriceCents === null
+        ? "prezzo da definire"
+        : `${priceStatusLabel(item.priceStatus).toLowerCase()} ${euroFormatter.format(item.unitPriceCents / 100)} / cad.`;
+      const lineTotal = item.lineTotalCents === null
+        ? ""
+        : ` - totale ${euroFormatter.format(item.lineTotalCents / 100)}`;
       name.textContent = item.productName;
-      detail.textContent = `${item.colorName} / ${item.quantity} pz.`;
+      detail.textContent = `${item.colorName} / ${item.quantity} pz. / ${unitPrice}${lineTotal}`;
       listItem.append(name, detail);
       itemList.append(listItem);
     });

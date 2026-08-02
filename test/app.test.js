@@ -1386,7 +1386,104 @@ test("gestisce account, storico personale e accesso amministrativo unificato", a
   assert.equal(historyResponse.status, 200);
   assert.equal(history.length, 1);
   assert.equal(history[0].code, order.code);
+  assert.equal(history[0].totalPriceCents, 2400);
+  assert.equal(history[0].priceStatus, "confirmed");
   assert.equal(history[0].items[0].productName, "Vaso Orbitale");
+  assert.equal(history[0].items[0].unitPriceCents, 1200);
+  assert.equal(history[0].items[0].lineTotalCents, 2400);
+  assert.equal(history[0].items[0].priceStatus, "confirmed");
+
+  const customForm = new FormData();
+  customForm.append("model", new Blob([await create3mfCubeBuffer(10)], { type: "model/3mf" }), "storico-personale.3mf");
+  const customUpload = (await (await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: customForm })).json()).data;
+  const customOrderResponse = await accountFetch("/api/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      firstName: "Cliente",
+      lastName: "Test",
+      items: [{
+        type: "custom",
+        sourceType: "file",
+        id: customUpload.id,
+        name: customUpload.name,
+        modelFormat: customUpload.modelFormat,
+        colorId: 1,
+        quantity: 1,
+      }],
+    }),
+  });
+  const customOrder = (await customOrderResponse.json()).data;
+  assert.equal(customOrderResponse.status, 201);
+  const savedCustomOrder = database.prepare("SELECT * FROM orders WHERE code = ?").get(customOrder.code);
+  const savedCustomItem = database.prepare("SELECT * FROM order_items WHERE order_id = ?").get(savedCustomOrder.id);
+
+  const estimatedHistory = (await (await accountFetch("/api/account/orders")).json()).data;
+  const estimatedCustom = estimatedHistory.find((entry) => entry.code === customOrder.code);
+  assert.equal(estimatedCustom.totalPriceCents, 500);
+  assert.equal(estimatedCustom.priceStatus, "estimated");
+  assert.equal(estimatedCustom.items[0].unitPriceCents, 500);
+  assert.equal(estimatedCustom.items[0].priceStatus, "estimated");
+  assert.equal(estimatedCustom.items[0].estimatedQuote.unitPriceCents, 500);
+
+  const adminCookieForQuote = await authenticateAdmin();
+  const confirmedQuoteResponse = await fetch(`${baseUrl}/api/admin/orders/${savedCustomOrder.id}/items/${savedCustomItem.id}/actual-quote`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", cookie: adminCookieForQuote },
+    body: JSON.stringify({ grams: 4.53, hours: 22.6 / 60 }),
+  });
+  assert.equal(confirmedQuoteResponse.status, 200);
+  const confirmedHistory = (await (await accountFetch("/api/account/orders")).json()).data;
+  const confirmedCustom = confirmedHistory.find((entry) => entry.code === customOrder.code);
+  assert.equal(confirmedCustom.totalPriceCents, 500);
+  assert.equal(confirmedCustom.priceStatus, "confirmed");
+  assert.equal(confirmedCustom.items[0].unitPriceCents, 500);
+  assert.equal(confirmedCustom.items[0].priceStatus, "confirmed");
+  assert.equal(confirmedCustom.items[0].actualQuote.unitPriceCents, 500);
+
+  const linkOrderResponse = await accountFetch("/api/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      firstName: "Cliente",
+      lastName: "Test",
+      items: [{
+        type: "custom",
+        sourceType: "link",
+        externalUrl: "https://makerworld.com/en/models/456-storico",
+        colorId: 1,
+        quantity: 2,
+      }],
+    }),
+  });
+  const linkOrder = (await linkOrderResponse.json()).data;
+  assert.equal(linkOrderResponse.status, 201);
+  const savedLinkOrder = database.prepare("SELECT * FROM orders WHERE code = ?").get(linkOrder.code);
+  const savedLinkItem = database.prepare("SELECT * FROM order_items WHERE order_id = ?").get(savedLinkOrder.id);
+
+  const pendingLinkHistory = (await (await accountFetch("/api/account/orders")).json()).data;
+  const pendingLink = pendingLinkHistory.find((entry) => entry.code === linkOrder.code);
+  assert.equal(pendingLink.totalPriceCents, 0);
+  assert.equal(pendingLink.priceStatus, "partial");
+  assert.equal(pendingLink.items[0].unitPriceCents, null);
+  assert.equal(pendingLink.items[0].lineTotalCents, null);
+  assert.equal(pendingLink.items[0].priceStatus, "pending");
+  assert.equal(pendingLink.items[0].estimatedQuote, null);
+
+  const confirmedLinkQuoteResponse = await fetch(`${baseUrl}/api/admin/orders/${savedLinkOrder.id}/items/${savedLinkItem.id}/actual-quote`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", cookie: adminCookieForQuote },
+    body: JSON.stringify({ grams: 22.68, hours: 103 / 60 }),
+  });
+  assert.equal(confirmedLinkQuoteResponse.status, 200);
+  const confirmedLinkHistory = (await (await accountFetch("/api/account/orders")).json()).data;
+  const confirmedLink = confirmedLinkHistory.find((entry) => entry.code === linkOrder.code);
+  assert.equal(confirmedLink.totalPriceCents, 1000);
+  assert.equal(confirmedLink.priceStatus, "confirmed");
+  assert.equal(confirmedLink.items[0].unitPriceCents, 500);
+  assert.equal(confirmedLink.items[0].lineTotalCents, 1000);
+  assert.equal(confirmedLink.items[0].priceStatus, "confirmed");
+  assert.equal(confirmedLink.items[0].actualQuote.unitPriceCents, 500);
 
   const logout = await accountFetch("/api/account/logout", { method: "POST" });
   assert.equal(logout.status, 204);
@@ -1445,6 +1542,9 @@ test("gestisce account, storico personale e accesso amministrativo unificato", a
   database.prepare("DELETE FROM user_accounts WHERE id = ?").run(registeredAccount.data.id);
   assert.equal(database.prepare("SELECT user_account_id FROM orders WHERE id = ?").get(savedOrder.id).user_account_id, null);
   database.prepare("DELETE FROM orders WHERE id = ?").run(savedOrder.id);
+  await rm(path.join(orderFileDirectory, savedCustomItem.model_filename), { force: true });
+  database.prepare("DELETE FROM orders WHERE id = ?").run(savedCustomOrder.id);
+  database.prepare("DELETE FROM orders WHERE id = ?").run(savedLinkOrder.id);
   database.prepare("DELETE FROM user_accounts WHERE id = ?").run(secondAccount.data.id);
 });
 

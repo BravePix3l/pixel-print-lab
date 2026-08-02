@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Scegli un modello o proponi il tuo file 3MF per una stampa 3D.">
     <title>Pixel Print Lab | Stampe 3D</title>
-    <link rel="stylesheet" href="/styles.css?v=0.6.9">
+    <link rel="stylesheet" href="/styles.css?v=1.1.2">
     <script type="importmap">
       {
         "imports": {
@@ -157,7 +157,7 @@
             <label class="file-field" for="custom-file">
               <span class="file-field__title">Seleziona il file</span>
               <span class="file-field__value" id="custom-file-name">Nessun file selezionato</span>
-              <input id="custom-file" name="model" type="file" accept=".3mf,model/3mf">
+              <input id="custom-file" name="model" type="file">
             </label>
             <p class="field-hint">File `.3mf`, massimo 500 MB. I `.gcode.3mf` sono esclusi. Il file temporaneo scade dopo 24 ore.</p>
             <button class="preview-file" id="custom-preview" type="button" disabled>Visualizza modello</button>
@@ -399,10 +399,10 @@
           </div>
         </header>
         <ul data-field="account-order-items"></ul>
-        <p class="account-order__total"><span>Totale catalogo</span><strong data-field="account-order-total"></strong></p>
+        <p class="account-order__total"><span data-field="account-order-total-label">Totale</span><strong data-field="account-order-total"></strong></p>
       </article>
     </template>
 
-    <script type="module" src="/app.js?v=0.6.9"></script>
+    <script type="module" src="/app.js?v=1.1.2"></script>
   </body>
 </html>

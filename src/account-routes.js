@@ -18,26 +18,63 @@ function sendAuthError(response, error) {
   });
 }
 
+function parseJson(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+function serializeItem(item) {
+  const estimatedQuote = parseJson(item.quote_json);
+  const actualQuote = parseJson(item.actual_quote_json);
+  const estimatedUnitPriceCents = estimatedQuote?.unitPriceCents ?? null;
+  const unitPriceCents = item.unit_price_cents ?? estimatedUnitPriceCents;
+  const priceStatus = item.unit_price_cents !== null
+    ? "confirmed"
+    : estimatedUnitPriceCents !== null
+      ? "estimated"
+      : "pending";
+  return {
+    id: item.id,
+    itemType: item.item_type,
+    productName: item.product_name,
+    colorName: item.color_name,
+    colorHex: item.color_hex,
+    quantity: item.quantity,
+    unitPriceCents,
+    lineTotalCents: unitPriceCents === null ? null : unitPriceCents * item.quantity,
+    priceStatus,
+    estimatedQuote,
+    actualQuote,
+    originalName: item.original_name,
+    sourceName: item.source_name,
+  };
+}
+
 function serializeOrder(order, items) {
+  const serializedItems = items.map(serializeItem);
+  const totalPriceCents = serializedItems.reduce(
+    (total, item) => total + (item.lineTotalCents ?? 0),
+    0,
+  );
+  const priceStatus = serializedItems.some((item) => item.priceStatus === "pending")
+    ? "partial"
+    : serializedItems.some((item) => item.priceStatus === "estimated")
+      ? "estimated"
+      : "confirmed";
   return {
     id: order.id,
     code: order.code,
     firstName: order.first_name,
     lastName: order.last_name,
     catalogTotalCents: order.catalog_total_cents,
+    totalPriceCents,
+    priceStatus,
     status: order.status,
     createdAt: order.created_at,
-    items: items.map((item) => ({
-      id: item.id,
-      itemType: item.item_type,
-      productName: item.product_name,
-      colorName: item.color_name,
-      colorHex: item.color_hex,
-      quantity: item.quantity,
-      unitPriceCents: item.unit_price_cents,
-      originalName: item.original_name,
-      sourceName: item.source_name,
-    })),
+    items: serializedItems,
   };
 }
 
