@@ -25,6 +25,8 @@ let loadVersion = 0;
 let initialCameraPosition;
 let initialTarget;
 
+const PREVIEW_SIZE_LIMIT_BYTES = 200 * 1024 * 1024;
+
 function resizeRenderer() {
   if (!renderer || viewport.clientWidth === 0 || viewport.clientHeight === 0) {
     return;
@@ -177,6 +179,15 @@ function createViewerColorOption(color, groupName, selected) {
   return label;
 }
 
+async function loadModelBuffer(source) {
+  if (source instanceof ArrayBuffer) return source;
+  if (source?.arrayBuffer instanceof ArrayBuffer) return source.arrayBuffer;
+  if (source?.arrayBuffer) return source.arrayBuffer;
+  const response = await fetch(source);
+  if (!response.ok) throw new Error(`Errore ${response.status} nel caricamento del modello.`);
+  return response.arrayBuffer();
+}
+
 export async function openModelViewer(product, colorHex = "#ffffff", availableColors = []) {
   initializeViewer();
   const currentLoad = ++loadVersion;
@@ -234,7 +245,11 @@ export async function openModelViewer(product, colorHex = "#ffffff", availableCo
         }
       });
     } else {
-      const geometry = await stlLoader.loadAsync(product.modelUrl);
+      const modelBuffer = await loadModelBuffer(product.modelBuffer ?? product.modelUrl);
+      if (modelBuffer.byteLength > PREVIEW_SIZE_LIMIT_BYTES) {
+        throw new Error(`Il modello supera ${Math.round(PREVIEW_SIZE_LIMIT_BYTES / 1024 / 1024)} MB e non può essere visualizzato in anteprima. Il preventivo è comunque disponibile.`);
+      }
+      const geometry = stlLoader.parse(modelBuffer);
       geometry.computeVertexNormals();
       currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
       loadedObject = new THREE.Mesh(geometry, currentMaterial);
@@ -252,7 +267,7 @@ export async function openModelViewer(product, colorHex = "#ffffff", availableCo
     console.error(error);
     viewport.classList.remove("viewer-viewport--loading");
     viewport.classList.add("viewer-viewport--error");
-    status.textContent = "Impossibile caricare il modello 3D.";
+    status.textContent = error.message || "Impossibile caricare il modello 3D.";
   }
 }
 

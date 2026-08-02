@@ -668,7 +668,6 @@ customLinkInput.addEventListener("input", () => {
 });
 
 customPreviewButton.addEventListener("click", async () => {
-  let objectUrl;
   try {
     const file = validateSelectedFile();
     const { openModelViewer } = await getViewerModule();
@@ -685,17 +684,14 @@ customPreviewButton.addEventListener("click", async () => {
         ? compatibility.warnings[0]?.message ?? "Il progetto supera il volume della stampante."
         : "Primo piatto pronto e compreso nel volume standard.";
     } else {
-      objectUrl = URL.createObjectURL(file);
-      await openModelViewer({ name: file.name, modelUrl: objectUrl, modelFormat: "stl" }, colorHex, colors);
+      const modelBuffer = await file.arrayBuffer();
+      await openModelViewer({ name: file.name, modelBuffer, modelFormat: "stl" }, colorHex, colors);
     }
   } catch (error) {
     customFeedback.textContent = error.message;
     customFeedback.classList.add("custom-feedback--error");
   } finally {
     customPreviewButton.disabled = !customFileInput.files[0];
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-    }
   }
 });
 
