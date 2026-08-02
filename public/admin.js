@@ -10,7 +10,6 @@ const settingsForm = document.querySelector("#settings-form");
 const emailNotificationsInput = document.querySelector("#email-notifications-enabled");
 const smtpStatus = document.querySelector("#smtp-status");
 const settingsFeedback = document.querySelector("#settings-feedback");
-const slicerStatus = document.querySelector("#slicer-status");
 const pricingInputs = {
   filamentPriceCentsPerKg: document.querySelector("#pricing-filament-price"),
   filamentDensityGCm3: document.querySelector("#pricing-density"),
@@ -78,7 +77,6 @@ let colors = [];
 let currentOrder;
 let selectedProductId;
 let currentSection = "orders";
-let slicerConfigured = false;
 const orderStatusLabels = {
   in_attesa: "In attesa",
   in_lavorazione: "In lavorazione",
@@ -129,11 +127,6 @@ async function loadSettings() {
     const value = settings.pricing?.[field];
     input.value = pricingCentsFields.has(field) ? (value / 100).toFixed(2) : value;
   }
-  slicerConfigured = Boolean(settings.slicerConfigured);
-  slicerStatus.textContent = slicerConfigured
-    ? "Stima precisa attiva: PrusaSlicer configurato, disponibile sugli ordini con file modello."
-    : "Stima precisa non attiva: configura la variabile PRUSASLICER_PATH con il percorso dell'eseguibile PrusaSlicer.";
-  slicerStatus.dataset.configured = String(slicerConfigured);
   credentialsForm.reset();
   credentialsUsername.value = settings.adminUsername;
   credentialsFeedback.textContent = "";
@@ -229,18 +222,11 @@ async function loadArchive() {
   }
 }
 
-function formatQuoteResult(item, quote) {
-  const total = euroFormatter.format((quote.unitPriceCents * item.quantity) / 100);
-  return `Stima precisa (${quote.source}): ${quote.grams} g, ~${quote.hours} h, ${euroFormatter.format(quote.unitPriceCents / 100)} al pezzo, ${total} per ${item.quantity} pz. Materiale ${euroFormatter.format(quote.breakdown.materialCents / 100)} + energia ${euroFormatter.format(quote.breakdown.energyCents / 100)} + usura ${euroFormatter.format(quote.breakdown.wearCents / 100)}.`;
-}
-
 function createItemEditor(item) {
   const element = adminItemTemplate.content.firstElementChild.cloneNode(true);
   const productField = element.querySelector('[data-field="product-field"]');
   const modelLink = element.querySelector('[data-field="model-link"]');
   const externalLink = element.querySelector('[data-field="external-link"]');
-  const quoteButton = element.querySelector('[data-field="precise-quote"]');
-  const quoteResult = element.querySelector('[data-field="quote-result"]');
 
   element.dataset.itemId = item.id ?? "";
   element.dataset.itemType = item.itemType;
@@ -260,29 +246,6 @@ function createItemEditor(item) {
       modelLink.download = item.originalName ?? "modello";
       const compatibility = item.modelMetadata?.compatibility;
       if (compatibility) modelLink.title = `Verifica piatto standard: ${compatibility.status}`;
-      if (item.preciseQuote) {
-        quoteResult.hidden = false;
-        quoteResult.textContent = formatQuoteResult(item, item.preciseQuote);
-      }
-      if (slicerConfigured) {
-        quoteButton.hidden = false;
-        quoteButton.addEventListener("click", async () => {
-          quoteButton.disabled = true;
-          quoteButton.textContent = "Slicing...";
-          try {
-            const quote = await api(`/api/admin/orders/${currentOrder.id}/items/${item.id}/precise-quote`, { method: "POST" });
-            item.preciseQuote = quote;
-            quoteResult.hidden = false;
-            quoteResult.textContent = formatQuoteResult(item, quote);
-          } catch (error) {
-            quoteResult.hidden = false;
-            quoteResult.textContent = error.message;
-          } finally {
-            quoteButton.disabled = false;
-            quoteButton.textContent = "Stima precisa";
-          }
-        });
-      }
     }
     if (item.itemType === "custom_link") {
       externalLink.hidden = false;

@@ -14,8 +14,7 @@ import {
   defaultOrderFileDirectory,
   ORDER_STATUSES,
 } from "./order-routes.js";
-import { finalizeQuote, readPricingSettings, updatePricingSettings } from "./pricing.js";
-import { SlicerError } from "./slicer-quote.js";
+import { readPricingSettings, updatePricingSettings } from "./pricing.js";
 
 class AdminError extends Error {
   constructor(code, message, status = 400) {
@@ -26,7 +25,7 @@ class AdminError extends Error {
 }
 
 function sendError(response, error) {
-  if (error instanceof AdminError || error instanceof CatalogAssetError || error instanceof AuthError || error instanceof SlicerError) {
+  if (error instanceof AdminError || error instanceof CatalogAssetError || error instanceof AuthError) {
     return response.status(error.status).json({ error: { code: error.code, message: error.message } });
   }
   if (error?.name === "MulterError") {
@@ -192,7 +191,6 @@ function serializeItem(item) {
     hasModel: Boolean(item.model_filename),
     modelFormat: item.model_format ?? (item.model_filename?.toLowerCase().endsWith(".3mf") ? "3mf" : item.model_filename ? "stl" : null),
     modelMetadata,
-    preciseQuote: parseModelMetadata(item.quote_json),
   };
 }
 
@@ -204,7 +202,6 @@ export function registerAdminRoutes(
     catalogDirectory,
     orderFileDirectory = defaultOrderFileDirectory,
     emailService,
-    slicerService,
     authService,
   },
 ) {
@@ -252,9 +249,6 @@ export function registerAdminRoutes(
   const updateOrderStatus = database.prepare(`
     UPDATE orders SET status = ? WHERE id = ?
   `);
-  const updateItemQuote = database.prepare(`
-    UPDATE order_items SET quote_json = ? WHERE id = ? AND order_id = ?
-  `);
   const getSettings = database.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1");
   const updateEmailNotifications = database.prepare(`
     UPDATE app_settings
@@ -271,7 +265,6 @@ export function registerAdminRoutes(
       adminUsername: adminAccess.username,
       adminCredentialsCustomized: adminAccess.customized,
       pricing: readPricingSettings(database),
-      slicerConfigured: Boolean(slicerService?.configured),
     };
   }
 
@@ -548,39 +541,6 @@ export function registerAdminRoutes(
     response.setHeader("Content-Type", modelContentType(item.model_format ?? (item.model_filename.toLowerCase().endsWith(".3mf") ? "3mf" : "stl")));
     response.setHeader("X-Content-Type-Options", "nosniff");
     return response.download(path.join(orderFileDirectory, item.model_filename), item.original_name ?? item.model_filename);
-  });
-
-  app.post("/api/admin/orders/:orderId/items/:itemId/precise-quote", requireAdmin, async (request, response) => {
-    try {
-      const orderId = Number.parseInt(request.params.orderId, 10);
-      const itemId = Number.parseInt(request.params.itemId, 10);
-      const item = findItem.get(itemId, orderId);
-      if (!item?.model_filename) {
-        throw new AdminError("MODEL_NOT_FOUND", "File modello non trovato.", 404);
-      }
-      if (!slicerService?.configured) {
-        throw new SlicerError(
-          "SLICER_NOT_CONFIGURED",
-          "PrusaSlicer non e configurato: imposta la variabile PRUSASLICER_PATH.",
-          503,
-        );
-      }
-      const stats = await slicerService.slice(path.join(orderFileDirectory, item.model_filename));
-      const quote = finalizeQuote(
-        { grams: stats.grams, hours: stats.seconds / 3600 },
-        readPricingSettings(database),
-      );
-      const preciseQuote = {
-        ...quote,
-        seconds: Math.round(stats.seconds),
-        source: "prusaslicer",
-        createdAt: new Date().toISOString(),
-      };
-      updateItemQuote.run(JSON.stringify(preciseQuote), item.id, item.order_id);
-      return response.json({ data: preciseQuote });
-    } catch (error) {
-      return sendError(response, error);
-    }
   });
 
   app.delete("/api/admin/orders/:id", requireAdmin, async (request, response) => {

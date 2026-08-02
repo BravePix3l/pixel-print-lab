@@ -29,8 +29,6 @@ services:
     #   SMTP_PASSWORD: smtp-password
     #   SMTP_FROM: "Pixel Print Lab <noreply@example.com>"
     #   SMTP_TO: orders@example.com
-    #   PRUSASLICER_PATH: /usr/local/bin/prusa-slicer-headless
-    #   PRUSASLICER_TIMEOUT_MS: "120000"
 
 volumes:
   pixel-print-lab-data:

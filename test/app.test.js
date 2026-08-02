@@ -14,7 +14,6 @@ import {
 } from "../src/custom-model-routes.js";
 import { migrateDatabase, openDatabase, seedDatabase } from "../src/database.js";
 import { createEmailService } from "../src/email-service.js";
-import { SlicerError } from "../src/slicer-quote.js";
 
 let server;
 let baseUrl;
@@ -25,8 +24,6 @@ let catalogDirectory;
 let sentEmails;
 let rejectEmails;
 let emailService;
-let slicerConfigured;
-let slicerBehavior;
 
 before(async () => {
   uploadDirectory = await mkdtemp(path.join(tmpdir(), "pixel-print-lab-test-"));
@@ -42,10 +39,6 @@ before(async () => {
       sentEmails.push(message);
     },
   };
-  slicerConfigured = false;
-  slicerBehavior = async () => {
-    throw new Error("Comportamento slicer non impostato dal test");
-  };
   database = openDatabase(":memory:");
   seedDatabase(database);
   server = createApp({
@@ -56,12 +49,6 @@ before(async () => {
     adminUsername: "test-admin",
     adminPassword: "test-admin-password",
     emailService,
-    slicerService: {
-      get configured() {
-        return slicerConfigured;
-      },
-      slice: (modelPath) => slicerBehavior(modelPath),
-    },
     uploadRateLimit: false,
     orderRateLimit: false,
     disableAuthRateLimits: true,
@@ -808,7 +795,6 @@ test("gestisce l'invio SMTP opzionale dalle impostazioni amministrative", async 
     adminUsername: "test-admin",
     adminCredentialsCustomized: false,
     pricing: DEFAULT_PRICING,
-    slicerConfigured: false,
   });
 
   const invalid = await adminFetch("/api/admin/settings", {
@@ -958,74 +944,6 @@ test("aggiorna i parametri di costo dalle impostazioni e li applica alle stime",
     body: JSON.stringify({ emailNotificationsEnabled: false, pricing: DEFAULT_PRICING }),
   });
   assert.equal(restored.status, 200);
-});
-
-test("calcola e conserva la stima precisa con lo slicer lato amministratore", async () => {
-  const uploadForm = new FormData();
-  uploadForm.append("model", new Blob([createBinaryStlCubeBuffer(20)], { type: "model/stl" }), "pezzo.stl");
-  const upload = (await (await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: uploadForm })).json()).data;
-  const orderResponse = await fetch(`${baseUrl}/api/orders`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      firstName: "Sara",
-      lastName: "Slicer",
-      items: [
-        { type: "custom", sourceType: "file", id: upload.id, name: upload.name, modelFormat: "stl", colorId: 1, quantity: 2 },
-        { type: "catalog", productId: 1, colorId: 1, quantity: 1 },
-      ],
-    }),
-  });
-  assert.equal(orderResponse.status, 201);
-  const code = (await orderResponse.json()).data.code;
-  const order = database.prepare("SELECT * FROM orders WHERE code = ?").get(code);
-  const cookie = await authenticateAdmin();
-  const adminFetch = (pathName, options = {}) => fetch(`${baseUrl}${pathName}`, {
-    ...options,
-    headers: { cookie, ...(options.headers ?? {}) },
-  });
-  const detail = (await (await adminFetch(`/api/admin/orders/${order.id}`)).json()).data;
-  const fileItem = detail.items.find((item) => item.itemType === "custom_file");
-  const catalogItem = detail.items.find((item) => item.itemType === "catalog");
-  assert.equal(fileItem.preciseQuote, null);
-
-  const notConfigured = await adminFetch(`/api/admin/orders/${order.id}/items/${fileItem.id}/precise-quote`, { method: "POST" });
-  assert.equal(notConfigured.status, 503);
-  assert.equal((await notConfigured.json()).error.code, "SLICER_NOT_CONFIGURED");
-
-  const noModel = await adminFetch(`/api/admin/orders/${order.id}/items/${catalogItem.id}/precise-quote`, { method: "POST" });
-  assert.equal(noModel.status, 404);
-
-  slicerConfigured = true;
-  slicerBehavior = async (modelPath) => {
-    assert.ok((await stat(modelPath)).isFile());
-    return { grams: 12.3, seconds: 5430 };
-  };
-  const quoteResponse = await adminFetch(`/api/admin/orders/${order.id}/items/${fileItem.id}/precise-quote`, { method: "POST" });
-  const quote = (await quoteResponse.json()).data;
-  assert.equal(quoteResponse.status, 200);
-  assert.equal(quote.grams, 12.3);
-  assert.equal(quote.hours, 1.51);
-  assert.equal(quote.seconds, 5430);
-  assert.deepEqual(quote.breakdown, { materialCents: 25, energyCents: 7, wearCents: 75 });
-  assert.equal(quote.unitPriceCents, 500);
-  assert.equal(quote.source, "prusaslicer");
-  assert.ok(quote.createdAt);
-
-  const persisted = (await (await adminFetch(`/api/admin/orders/${order.id}`)).json()).data;
-  const persistedItem = persisted.items.find((item) => item.id === fileItem.id);
-  assert.equal(persistedItem.preciseQuote.unitPriceCents, 500);
-  assert.equal(persistedItem.preciseQuote.source, "prusaslicer");
-
-  slicerBehavior = async () => {
-    throw new SlicerError("SLICER_FAILED", "PrusaSlicer non e riuscito a processare il modello (codice 1).", 422);
-  };
-  const failed = await adminFetch(`/api/admin/orders/${order.id}/items/${fileItem.id}/precise-quote`, { method: "POST" });
-  assert.equal(failed.status, 422);
-  assert.equal((await failed.json()).error.code, "SLICER_FAILED");
-  slicerConfigured = false;
-
-  assert.equal((await adminFetch(`/api/admin/orders/${order.id}`, { method: "DELETE" })).status, 204);
 });
 
 test("rispetta il limite di 15 ordini in lavorazione", async () => {

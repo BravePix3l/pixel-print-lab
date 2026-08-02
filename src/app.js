@@ -8,7 +8,6 @@ import { registerAdminRoutes } from "./admin-routes.js";
 import { registerCatalogAssetServing } from "./catalog-assets.js";
 import { createAuthService } from "./auth-service.js";
 import { registerAccountRoutes } from "./account-routes.js";
-import { createSlicerService } from "./slicer-quote.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const publicDirectory = path.join(currentDirectory, "..", "public");
@@ -26,7 +25,6 @@ export function createApp({
   adminPassword,
   trustProxy = false,
   emailService,
-  slicerService = createSlicerService(),
   uploadRateLimit = DEFAULT_UPLOAD_RATE_LIMIT,
   orderRateLimit = DEFAULT_ORDER_RATE_LIMIT,
   disableAuthRateLimits = false,
@@ -80,7 +78,6 @@ export function createApp({
     catalogDirectory,
     orderFileDirectory,
     emailService,
-    slicerService,
     authService: auth,
   });
 

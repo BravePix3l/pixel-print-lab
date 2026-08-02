@@ -757,16 +757,6 @@
   line-height: 1.5;
 }
 
-#slicer-status[data-configured="true"] {
-  color: var(--green);
-  font-weight: 700;
-}
-
-#slicer-status[data-configured="false"] {
-  color: #b63627;
-  font-weight: 700;
-}
-
 .order-actions {
   margin-top: 1.5rem;
   display: flex;
