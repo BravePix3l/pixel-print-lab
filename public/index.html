@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Scegli un modello o proponi il tuo file STL o 3MF per una stampa 3D.">
+    <meta name="description" content="Scegli un modello o proponi il tuo file 3MF per una stampa 3D.">
     <title>Pixel Print Lab | Stampe 3D</title>
     <link rel="stylesheet" href="/styles.css?v=0.6.9">
     <script type="importmap">
@@ -143,14 +143,14 @@
           <div>
             <p class="section-number">03 / Fuori catalogo</p>
             <h2 id="titolo-modello-personale">Hai gia un modello?</h2>
-            <p>Carica un file STL o 3MF fino a 500 MB oppure indica un link da uno dei siti supportati.</p>
+            <p>Carica un file 3MF fino a 500 MB oppure indica un link da MakerWorld.</p>
           </div>
         </div>
 
         <form class="custom-form" id="custom-model-form">
           <fieldset class="source-selector">
             <legend>Sorgente del modello</legend>
-            <label><input type="radio" name="custom-source" value="file" checked> File STL o 3MF</label>
+            <label><input type="radio" name="custom-source" value="file" checked> File 3MF</label>
             <label><input type="radio" name="custom-source" value="link"> Link esterno</label>
           </fieldset>
 
@@ -158,9 +158,9 @@
             <label class="file-field" for="custom-file">
               <span class="file-field__title">Seleziona il file</span>
               <span class="file-field__value" id="custom-file-name">Nessun file selezionato</span>
-              <input id="custom-file" name="model" type="file" accept=".stl,.3mf,model/stl,model/3mf">
+              <input id="custom-file" name="model" type="file" accept=".3mf,model/3mf">
             </label>
-            <p class="field-hint">File `.stl` o `.3mf`, massimo 500 MB. I `.gcode.3mf` sono esclusi. Il file temporaneo scade dopo 24 ore.</p>
+            <p class="field-hint">File `.3mf`, massimo 500 MB. I `.gcode.3mf` sono esclusi. Il file temporaneo scade dopo 24 ore.</p>
             <button class="preview-file" id="custom-preview" type="button" disabled>Visualizza modello</button>
             <button class="quote-file" id="custom-quote" type="button" disabled>Calcola stima costo</button>
             <div class="quote-panel" id="custom-quote-panel" hidden>
@@ -178,9 +178,9 @@
           <div class="custom-source-panel" id="custom-link-panel" hidden>
             <label class="link-field" for="custom-link">
               <span>Link al modello</span>
-              <input id="custom-link" name="url" type="url" inputmode="url" placeholder="https://www.printables.com/model/...">
+              <input id="custom-link" name="url" type="url" inputmode="url" placeholder="https://makerworld.com/en/models/...">
             </label>
-            <p class="field-hint">Sono accettati Printables, Thingiverse, MakerWorld e Cults3D. Il link si aprira in una nuova pagina.</p>
+            <p class="field-hint">Sono accettati solo link da MakerWorld. Il link si aprira in una nuova pagina.</p>
           </div>
 
           <fieldset class="custom-colors">

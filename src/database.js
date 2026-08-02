@@ -310,6 +310,15 @@ const migrations = [
       ADD COLUMN quote_json TEXT;
     `,
   },
+  {
+    version: 13,
+    name: "remove_demo_stl_model_urls",
+    sql: `
+      UPDATE products
+      SET model_url = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE model_url IN ('/models/vaso-orbitale.stl', '/models/supporto-controller.stl');
+    `,
+  },
 ];
 
 const products = [
@@ -325,7 +334,7 @@ const products = [
     dimensionLabel: "Altezza",
     dimensionValue: "14 cm",
     material: "PLA",
-    modelUrl: "/models/vaso-orbitale.stl",
+    modelUrl: null,
     sortOrder: 10,
   },
   {
@@ -340,7 +349,7 @@ const products = [
     dimensionLabel: "Larghezza",
     dimensionValue: "9 cm",
     material: "PLA",
-    modelUrl: "/models/supporto-controller.stl",
+    modelUrl: null,
     sortOrder: 20,
   },
 ];

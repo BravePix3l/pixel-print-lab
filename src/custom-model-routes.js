@@ -8,7 +8,6 @@ import multer from "multer";
 import {
   detectModelFormat,
   inspectModelFile,
-  isValidStlFile,
   MAX_MODEL_FILE_SIZE,
   measureModelFile,
   ModelFileError,
@@ -19,15 +18,11 @@ import { RateLimiter, rateLimitMiddleware } from "./rate-limiter.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const defaultUploadDirectory = path.join(currentDirectory, "..", "storage", "uploads");
-export const MAX_STL_FILE_SIZE = MAX_MODEL_FILE_SIZE;
+export const MAX_UPLOAD_FILE_SIZE = MAX_MODEL_FILE_SIZE;
 export const UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
-export { isValidStlFile };
 
 const allowedSites = [
-  { domain: "printables.com", name: "Printables" },
-  { domain: "thingiverse.com", name: "Thingiverse" },
   { domain: "makerworld.com", name: "MakerWorld" },
-  { domain: "cults3d.com", name: "Cults3D" },
 ];
 
 class CustomModelError extends Error {
@@ -86,7 +81,7 @@ export function validateExternalModelUrl(value) {
   if (!site) {
     throw new CustomModelError(
       "LINK_NOT_ALLOWED",
-      "Sono accettati solo link da Printables, Thingiverse, MakerWorld o Cults3D.",
+      "Sono accettati solo link da MakerWorld (makerworld.com).",
     );
   }
 
@@ -97,7 +92,7 @@ export async function cleanupExpiredUploads(uploadDirectory, now = Date.now()) {
   const entries = await readdir(uploadDirectory, { withFileTypes: true });
   await Promise.all(
     entries
-      .filter((entry) => entry.isFile() && /\.(?:stl|3mf)$/i.test(entry.name))
+      .filter((entry) => entry.isFile() && /\.3mf$/i.test(entry.name))
       .map(async (entry) => {
         const filename = path.join(uploadDirectory, entry.name);
         const fileStats = await stat(filename);
@@ -166,7 +161,7 @@ export function registerCustomModelRoutes(
       if (!request.file) {
         return sendError(
           response,
-            new CustomModelError("MODEL_REQUIRED", "Seleziona un file STL o 3MF da caricare."),
+            new CustomModelError("MODEL_REQUIRED", "Seleziona un file 3MF da caricare."),
         );
       }
 
@@ -215,7 +210,7 @@ export function registerCustomModelRoutes(
     try {
       let modelPath;
       let modelFormat;
-      for (const format of ["stl", "3mf"]) {
+      for (const format of ["3mf"]) {
         const candidate = path.join(uploadDirectory, `${request.params.id}.${format}`);
         const fileStats = await stat(candidate).catch(() => null);
         if (fileStats?.isFile()) {
@@ -258,7 +253,7 @@ export function registerCustomModelRoutes(
 
     try {
       const results = await Promise.allSettled(
-        ["stl", "3mf"].map((extension) => unlink(path.join(uploadDirectory, `${request.params.id}.${extension}`))),
+        ["3mf"].map((extension) => unlink(path.join(uploadDirectory, `${request.params.id}.${extension}`))),
       );
       if (results.every((result) => result.status === "rejected" && result.reason?.code === "ENOENT")) {
         throw Object.assign(new Error("Not found"), { code: "ENOENT" });

@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { STLLoader } from "three/addons/loaders/STLLoader.js";
 import { ThreeMFLoader } from "three/addons/loaders/3MFLoader.js";
 
 const dialog = document.querySelector("#viewer-dialog");
@@ -8,7 +7,6 @@ const title = document.querySelector("#viewer-title");
 const viewport = document.querySelector("#viewer-viewport");
 const status = document.querySelector("#viewer-status");
 const resetButton = document.querySelector("#viewer-reset");
-const stlLoader = new STLLoader();
 const threeMfLoader = new ThreeMFLoader();
 const unitFactors = { micron: 0.001, millimeter: 1, centimeter: 10, inch: 25.4, foot: 304.8, meter: 1000 };
 
@@ -24,8 +22,6 @@ let resizeObserver;
 let loadVersion = 0;
 let initialCameraPosition;
 let initialTarget;
-
-const PREVIEW_SIZE_LIMIT_BYTES = 200 * 1024 * 1024;
 
 function resizeRenderer() {
   if (!renderer || viewport.clientWidth === 0 || viewport.clientHeight === 0) {
@@ -179,15 +175,6 @@ function createViewerColorOption(color, groupName, selected) {
   return label;
 }
 
-async function loadModelBuffer(source) {
-  if (source instanceof ArrayBuffer) return source;
-  if (source?.arrayBuffer instanceof ArrayBuffer) return source.arrayBuffer;
-  if (source?.arrayBuffer) return source.arrayBuffer;
-  const response = await fetch(source);
-  if (!response.ok) throw new Error(`Errore ${response.status} nel caricamento del modello.`);
-  return response.arrayBuffer();
-}
-
 export async function openModelViewer(product, colorHex = "#ffffff", availableColors = []) {
   initializeViewer();
   const currentLoad = ++loadVersion;
@@ -222,38 +209,29 @@ export async function openModelViewer(product, colorHex = "#ffffff", availableCo
     if (!product.modelUrl) {
       throw new Error("Il prodotto non ha un file modello associato.");
     }
-    const modelFormat = product.modelFormat ?? (product.modelUrl.toLowerCase().endsWith(".3mf") ? "3mf" : "stl");
-    if (modelFormat === "3mf") {
-      loadedObject = await threeMfLoader.loadAsync(product.modelUrl);
-      const previewIndexes = new Set(product.inspection?.previewBuildItemIndexes ?? loadedObject.children.map((_child, index) => index));
-      const removedChildren = [];
-      [...loadedObject.children].forEach((child, index) => {
-        if (!previewIndexes.has(index)) {
-          loadedObject.remove(child);
-          removedChildren.push(child);
-        }
-      });
-      const retainedResources = collectResources(loadedObject);
-      removedChildren.forEach((child) => disposeObject(child, retainedResources));
-      const unitFactor = unitFactors[product.inspection?.unit ?? "millimeter"];
-      if (!unitFactor) throw new Error("Unita 3MF non supportata.");
-      loadedObject.scale.setScalar(unitFactor);
-      currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
-      loadedObject.traverse((child) => {
-        if (child.isMesh) {
-          child.material = currentMaterial;
-        }
-      });
-    } else {
-      const modelBuffer = await loadModelBuffer(product.modelBuffer ?? product.modelUrl);
-      if (modelBuffer.byteLength > PREVIEW_SIZE_LIMIT_BYTES) {
-        throw new Error(`Il modello supera ${Math.round(PREVIEW_SIZE_LIMIT_BYTES / 1024 / 1024)} MB e non può essere visualizzato in anteprima. Il preventivo è comunque disponibile.`);
-      }
-      const geometry = stlLoader.parse(modelBuffer);
-      geometry.computeVertexNormals();
-      currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
-      loadedObject = new THREE.Mesh(geometry, currentMaterial);
+    if (!product.modelUrl.toLowerCase().endsWith(".3mf")) {
+      throw new Error("Il viewer supporta solo file 3MF.");
     }
+    loadedObject = await threeMfLoader.loadAsync(product.modelUrl);
+    const previewIndexes = new Set(product.inspection?.previewBuildItemIndexes ?? loadedObject.children.map((_child, index) => index));
+    const removedChildren = [];
+    [...loadedObject.children].forEach((child, index) => {
+      if (!previewIndexes.has(index)) {
+        loadedObject.remove(child);
+        removedChildren.push(child);
+      }
+    });
+    const retainedResources = collectResources(loadedObject);
+    removedChildren.forEach((child) => disposeObject(child, retainedResources));
+    const unitFactor = unitFactors[product.inspection?.unit ?? "millimeter"];
+    if (!unitFactor) throw new Error("Unita 3MF non supportata.");
+    loadedObject.scale.setScalar(unitFactor);
+    currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
+    loadedObject.traverse((child) => {
+      if (child.isMesh) {
+        child.material = currentMaterial;
+      }
+    });
     if (currentLoad !== loadVersion) {
       disposeObject(loadedObject);
       return;

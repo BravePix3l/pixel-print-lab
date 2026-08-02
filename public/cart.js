@@ -14,8 +14,8 @@ function createCustomKey(id, colorId) {
 }
 
 function modelFormatFor(item) {
-  if (item.modelFormat === undefined && item.modelUrl === `/uploads/${item.id}.stl`) return "stl";
-  return ["stl", "3mf"].includes(item.modelFormat) ? item.modelFormat : null;
+  if (item.modelFormat === undefined && item.modelUrl === `/uploads/${item.id}.3mf`) return "3mf";
+  return item.modelFormat === "3mf" ? item.modelFormat : null;
 }
 
 function isValidInspection(inspection) {
@@ -176,7 +176,7 @@ function isAllowedExternalUrl(value) {
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
-    const domains = ["printables.com", "thingiverse.com", "makerworld.com", "cults3d.com"];
+    const domains = ["makerworld.com"];
     return (
       url.protocol === "https:" &&
       !url.username &&
@@ -208,7 +208,7 @@ function isValidStoredCustomItem(item) {
   }
   return (
     item.sourceType === "link" &&
-    ["Printables", "Thingiverse", "MakerWorld", "Cults3D"].includes(item.sourceName) &&
+    item.sourceName === "MakerWorld" &&
     isAllowedExternalUrl(item.externalUrl)
   );
 }

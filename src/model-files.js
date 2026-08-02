@@ -1,10 +1,10 @@
-import { open, readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { SaxesParser } from "saxes";
 import yauzl from "yauzl";
 
 export const MAX_MODEL_FILE_SIZE = 500 * 1024 * 1024;
-export const MODEL_FORMATS = new Set(["stl", "3mf"]);
+export const MODEL_FORMATS = new Set(["3mf"]);
 
 const MAX_ARCHIVE_ENTRIES = 256;
 const MAX_ARCHIVE_ENTRY_SIZE = 500 * 1024 * 1024;
@@ -22,7 +22,6 @@ const MAX_TRAVERSAL_STEPS = 2_000_000;
 const MAX_PLATES = 100;
 const MAX_PLATE_INSTANCES = 10_000;
 const MAX_PLATE_METADATA = 100;
-const MAX_ASCII_STL_TRIANGLES = 50_000_000;
 const STANDARD_BUILD_VOLUME_MM = [256, 256, 256];
 const MODEL_RELATIONSHIP = "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel";
 const UNIT_FACTORS = {
@@ -52,14 +51,13 @@ export function modelContentType(format) {
 }
 
 export function detectModelFormat(filename) {
-  if (typeof filename !== "string") throw new ModelFileError("INVALID_MODEL_EXTENSION", "Il file deve essere STL o 3MF.");
+  if (typeof filename !== "string") throw new ModelFileError("INVALID_MODEL_EXTENSION", "Il file deve essere 3MF.");
   const lowerName = path.basename(filename.replaceAll("\\", "/")).toLowerCase();
   if (lowerName.endsWith(".gcode.3mf")) {
     throw new ModelFileError("GCODE_3MF_NOT_SUPPORTED", "I file .gcode.3mf non sono supportati.");
   }
   if (lowerName.endsWith(".3mf")) return "3mf";
-  if (lowerName.endsWith(".stl")) return "stl";
-  throw new ModelFileError("INVALID_MODEL_EXTENSION", "Il file deve avere estensione .stl o .3mf.");
+  throw new ModelFileError("INVALID_MODEL_EXTENSION", "Il file deve avere estensione .3mf.");
 }
 
 export function sanitizeOriginalModelName(value, expectedFormat) {
@@ -68,25 +66,6 @@ export function sanitizeOriginalModelName(value, expectedFormat) {
   const normalized = path.basename(value.replaceAll("\\", "/")).replace(/[\u0000-\u001f\u007f]/g, "_").trim().slice(0, 120);
   if (!normalized) throw new ModelFileError("INVALID_FILE_NAME", "Il nome del file modello non e valido.");
   return normalized;
-}
-
-export async function isValidStlFile(filename) {
-  const fileStats = await stat(filename);
-  if (fileStats.size < 15 || fileStats.size > MAX_MODEL_FILE_SIZE) return false;
-  const file = await open(filename, "r");
-  try {
-    const sampleSize = Math.min(fileStats.size, 4096);
-    const sample = Buffer.alloc(sampleSize);
-    await file.read(sample, 0, sampleSize, 0);
-    if (fileStats.size >= 84) {
-      const triangleCount = sample.readUInt32LE(80);
-      if (triangleCount > 0 && 84 + triangleCount * 50 === fileStats.size) return true;
-    }
-    const asciiSample = sample.toString("utf8").trimStart().toLowerCase();
-    return asciiSample.startsWith("solid") && asciiSample.includes("facet") && asciiSample.includes("vertex");
-  } finally {
-    await file.close();
-  }
 }
 
 function attribute(node, name) {
@@ -542,94 +521,15 @@ export async function inspect3mfFile(filename) {
   };
 }
 
-function measureTriangleBatch(state, a, b, c) {
-  state.signedVolume += signedTetraVolume(a, b, c);
-  for (const vertex of [a, b, c]) {
-    for (let axis = 0; axis < 3; axis += 1) {
-      state.minimum[axis] = Math.min(state.minimum[axis], vertex[axis]);
-      state.maximum[axis] = Math.max(state.maximum[axis], vertex[axis]);
-    }
-  }
-  state.triangleCount += 1;
-}
-
-function createMeasureState() {
+export async function measureModelFile(filename, _format) {
+  const inspection = await inspect3mfFile(filename);
   return {
-    signedVolume: 0,
-    minimum: [Infinity, Infinity, Infinity],
-    maximum: [-Infinity, -Infinity, -Infinity],
-    triangleCount: 0,
+    volumeMm3: inspection.volumeMm3,
+    boundsMm: inspection.boundsMm,
+    triangleCount: null,
   };
 }
 
-function finalizeMeasurements(state, sourceLabel) {
-  if (state.triangleCount === 0) throw new ModelFileError("INVALID_STL_CONTENT", `Il file ${sourceLabel} non contiene triangoli.`);
-  const size = state.maximum.map((value, index) => value - state.minimum[index]);
-  const rounded = (values) => values.map((value) => Math.round(value * 1000) / 1000);
-  return {
-    volumeMm3: Math.round(Math.abs(state.signedVolume) * 1000) / 1000,
-    boundsMm: { min: rounded(state.minimum), max: rounded(state.maximum), size: rounded(size) },
-    triangleCount: state.triangleCount,
-  };
-}
-
-export async function measureStlFile(filename) {
-  const fileStats = await stat(filename);
-  if (fileStats.size < 15 || fileStats.size > MAX_MODEL_FILE_SIZE) {
-    throw new ModelFileError("INVALID_STL_CONTENT", "Il file non contiene una struttura STL valida.");
-  }
-  const buffer = await readFile(filename);
-  const state = createMeasureState();
-  if (buffer.length >= 84) {
-    const triangleCount = buffer.readUInt32LE(80);
-    if (triangleCount > 0 && 84 + triangleCount * 50 === buffer.length) {
-      for (let index = 0; index < triangleCount; index += 1) {
-        const offset = 84 + index * 50 + 12;
-        const vertex = (corner) => [
-          buffer.readFloatLE(offset + corner * 12),
-          buffer.readFloatLE(offset + corner * 12 + 4),
-          buffer.readFloatLE(offset + corner * 12 + 8),
-        ];
-        measureTriangleBatch(state, vertex(0), vertex(1), vertex(2));
-      }
-      return finalizeMeasurements(state, "STL");
-    }
-  }
-  const text = buffer.toString("utf8");
-  if (!text.trimStart().toLowerCase().startsWith("solid")) throw new ModelFileError("INVALID_STL_CONTENT", "Il file non contiene una struttura STL valida.");
-  const vertexPattern = /vertex\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)/gi;
-  const pending = [];
-  for (const match of text.matchAll(vertexPattern)) {
-    pending.push([Number(match[1]), Number(match[2]), Number(match[3])]);
-    if (pending.length === 3) {
-      measureTriangleBatch(state, pending[0], pending[1], pending[2]);
-      pending.length = 0;
-      if (state.triangleCount > MAX_ASCII_STL_TRIANGLES) {
-        throw new ModelFileError("STL_TOO_MANY_TRIANGLES", "Il file STL contiene troppi triangoli.");
-      }
-    }
-  }
-  return finalizeMeasurements(state, "STL");
-}
-
-export async function measureModelFile(filename, format) {
-  if (format === "stl") return measureStlFile(filename);
-  if (format === "3mf") {
-    const inspection = await inspect3mfFile(filename);
-    return {
-      volumeMm3: inspection.volumeMm3,
-      boundsMm: inspection.boundsMm,
-      triangleCount: null,
-    };
-  }
-  throw new ModelFileError("UNSUPPORTED_MODEL_FORMAT", "Formato modello non supportato.");
-}
-
-export async function inspectModelFile(filename, format) {
-  if (format === "stl") {
-    if (!(await isValidStlFile(filename))) throw new ModelFileError("INVALID_STL_CONTENT", "Il file non contiene una struttura STL valida.");
-    return null;
-  }
-  if (format === "3mf") return inspect3mfFile(filename);
-  throw new ModelFileError("UNSUPPORTED_MODEL_FORMAT", "Formato modello non supportato.");
+export async function inspectModelFile(filename, _format) {
+  return inspect3mfFile(filename);
 }

@@ -258,7 +258,7 @@ export function registerOrderRoutes(
           if (typeof item.id !== "string" || !UUID_PATTERN.test(item.id)) {
             throw new OrderError("UPLOAD_NOT_FOUND", "Il file modello temporaneo non e valido.");
           }
-          const modelFormat = item.modelFormat ?? "stl";
+          const modelFormat = item.modelFormat ?? "3mf";
           if (!MODEL_FORMATS.has(modelFormat)) throw new OrderError("UNSUPPORTED_MODEL_FORMAT", "Il formato del modello non e supportato.");
           const uniqueKey = `file:${item.id}:${item.colorId}`;
           if (seenItems.has(uniqueKey)) {

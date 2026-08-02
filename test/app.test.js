@@ -9,11 +9,12 @@ import { createApp } from "../src/app.js";
 import { createAuthService } from "../src/auth-service.js";
 import {
   cleanupExpiredUploads,
-  MAX_STL_FILE_SIZE,
+  MAX_UPLOAD_FILE_SIZE,
   UPLOAD_TTL_MS,
 } from "../src/custom-model-routes.js";
 import { migrateDatabase, openDatabase, seedDatabase } from "../src/database.js";
 import { createEmailService } from "../src/email-service.js";
+import { create3mfCubeBuffer, createInvalid3mfBuffer } from "./helpers/3mf.js";
 
 let server;
 let baseUrl;
@@ -140,29 +141,6 @@ function create3mfBuffer({ bambu = false, gcode = false, malformedModel = false,
   });
 }
 
-function createBinaryStlCubeBuffer(size = 10) {
-  const points = [
-    [0, 0, 0], [size, 0, 0], [size, size, 0], [0, size, 0],
-    [0, 0, size], [size, 0, size], [size, size, size], [0, size, size],
-  ];
-  const faces = [
-    [0, 3, 2], [0, 2, 1], [4, 5, 6], [4, 6, 7],
-    [0, 1, 5], [0, 5, 4], [2, 3, 7], [2, 7, 6],
-    [1, 2, 6], [1, 6, 5], [0, 4, 7], [0, 7, 3],
-  ];
-  const buffer = Buffer.alloc(84 + faces.length * 50);
-  buffer.writeUInt32LE(faces.length, 80);
-  faces.forEach((face, index) => {
-    const offset = 84 + index * 50;
-    face.forEach((vertexIndex, corner) => {
-      buffer.writeFloatLE(points[vertexIndex][0], offset + 12 + corner * 12);
-      buffer.writeFloatLE(points[vertexIndex][1], offset + 16 + corner * 12);
-      buffer.writeFloatLE(points[vertexIndex][2], offset + 20 + corner * 12);
-    });
-  });
-  return buffer;
-}
-
 const DEFAULT_PRICING = {
   filamentPriceCentsPerKg: 2000,
   filamentDensityGCm3: 1.24,
@@ -223,10 +201,7 @@ test("serve gli asset pubblici", async () => {
     "/app.js",
     "/cart.js",
     "/viewer.js",
-    "/models/vaso-orbitale.stl",
-    "/models/supporto-controller.stl",
     "/vendor/three/build/three.module.js",
-    "/vendor/three/examples/jsm/loaders/STLLoader.js",
     "/vendor/three/examples/jsm/loaders/3MFLoader.js",
     "/admin.html",
     "/admin.css",
@@ -287,7 +262,6 @@ test("espone i prodotti visibili ordinati", async () => {
   assert.equal(body.count, 2);
   assert.equal(body.data[0].slug, "vaso-orbitale");
   assert.equal(body.data[0].priceCents, 1200);
-  assert.equal(body.data[0].modelUrl, "/models/vaso-orbitale.stl");
   assert.deepEqual(body.data[0].dimension, { label: "Altezza", value: "14 cm" });
   assert.equal(body.data[1].slug, "supporto-controller");
 });
@@ -325,7 +299,7 @@ test("il seed puo essere eseguito piu volte senza duplicare dati", () => {
 
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM products").get().count, 2);
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM colors").get().count, 4);
-  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 12);
+  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 13);
   assert.equal(database.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
 });
 
@@ -387,7 +361,7 @@ test("migra un catalogo esistente senza perdere dati e impedisce il riuso degli 
     assert.match(legacyDatabase.prepare("SELECT sql FROM sqlite_master WHERE name = 'colors'").get().sql, /AUTOINCREMENT/);
     assert.equal(legacyDatabase.prepare("SELECT model_format FROM order_items WHERE id = 1").get().model_format, "stl");
     assert.equal(legacyDatabase.prepare("SELECT status FROM orders WHERE id = 1").get().status, "in_attesa");
-    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 12);
+    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 13);
     assert.equal(legacyDatabase.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
     assert.equal(legacyDatabase.prepare("SELECT admin_username FROM app_settings WHERE id = 1").get().admin_username, null);
     legacyDatabase.prepare("DELETE FROM products WHERE id = 7").run();
@@ -403,18 +377,10 @@ test("migra un catalogo esistente senza perdere dati e impedisce il riuso degli 
   }
 });
 
-test("carica, serve ed elimina un file STL valido", async () => {
-  const stl = `solid test
-facet normal 0 0 1
-  outer loop
-    vertex 0 0 0
-    vertex 1 0 0
-    vertex 0 1 0
-  endloop
-endfacet
-endsolid test`;
+test("carica, serve ed elimina un file 3MF valido", async () => {
+  const model3mf = await create3mfCubeBuffer(10);
   const form = new FormData();
-  form.append("model", new Blob([stl], { type: "model/stl" }), "prova.stl");
+  form.append("model", new Blob([model3mf], { type: "model/3mf" }), "prova.3mf");
 
   const uploadResponse = await fetch(`${baseUrl}/api/custom-models/upload`, {
     method: "POST",
@@ -423,37 +389,20 @@ endsolid test`;
   const upload = await uploadResponse.json();
 
   assert.equal(uploadResponse.status, 201);
-  assert.equal(upload.data.name, "prova.stl");
+  assert.equal(upload.data.name, "prova.3mf");
   assert.match(upload.data.id, /^[0-9a-f-]{36}$/);
-  assert.match(upload.data.modelUrl, /^\/uploads\/[0-9a-f-]{36}\.stl$/);
+  assert.match(upload.data.modelUrl, /^\/uploads\/[0-9a-f-]{36}\.3mf$/);
 
   const modelResponse = await fetch(`${baseUrl}${upload.data.modelUrl}`);
   assert.equal(modelResponse.status, 200);
-  assert.equal(modelResponse.headers.get("content-type"), "model/stl");
-  assert.match(await modelResponse.text(), /^solid test/);
+  assert.equal(modelResponse.headers.get("content-type"), "model/3mf");
+  assert.deepEqual(Buffer.from(await modelResponse.arrayBuffer()), model3mf);
 
   const deleteResponse = await fetch(`${baseUrl}/api/custom-models/${upload.data.id}`, {
     method: "DELETE",
   });
   assert.equal(deleteResponse.status, 204);
   assert.equal((await fetch(`${baseUrl}${upload.data.modelUrl}`)).status, 404);
-});
-
-test("accetta anche un file STL binario", async () => {
-  const binaryStl = Buffer.alloc(134);
-  binaryStl.writeUInt32LE(1, 80);
-  const form = new FormData();
-  form.append("model", new Blob([binaryStl]), "binario.stl");
-
-  const response = await fetch(`${baseUrl}/api/custom-models/upload`, {
-    method: "POST",
-    body: form,
-  });
-  const body = await response.json();
-
-  assert.equal(response.status, 201);
-  assert.equal(body.data.name, "binario.stl");
-  await fetch(`${baseUrl}/api/custom-models/${body.data.id}`, { method: "DELETE" });
 });
 
 test("ispeziona, serve ed elimina un archivio 3MF generico", async () => {
@@ -570,7 +519,7 @@ test("seleziona l'istanza esatta quando due piatti Bambu riusano lo stesso ogget
   await fetch(`${baseUrl}/api/custom-models/${model.id}`, { method: "DELETE" });
 });
 
-test("rifiuta estensioni e contenuti STL non validi", async () => {
+test("rifiuta estensioni e contenuti 3MF non validi", async () => {
   const wrongExtension = new FormData();
   wrongExtension.append("model", new Blob(["solid test"]), "prova.txt");
   const extensionResponse = await fetch(`${baseUrl}/api/custom-models/upload`, {
@@ -579,7 +528,7 @@ test("rifiuta estensioni e contenuti STL non validi", async () => {
   });
 
   const invalidContent = new FormData();
-  invalidContent.append("model", new Blob(["questo non e un modello STL valido"]), "prova.stl");
+  invalidContent.append("model", new Blob([createInvalid3mfBuffer()]), "prova.3mf");
   const contentResponse = await fetch(`${baseUrl}/api/custom-models/upload`, {
     method: "POST",
     body: invalidContent,
@@ -588,14 +537,14 @@ test("rifiuta estensioni e contenuti STL non validi", async () => {
   assert.equal(extensionResponse.status, 400);
   assert.equal((await extensionResponse.json()).error.code, "INVALID_MODEL_EXTENSION");
   assert.equal(contentResponse.status, 400);
-  assert.equal((await contentResponse.json()).error.code, "INVALID_STL_CONTENT");
+  assert.equal((await contentResponse.json()).error.code, "INVALID_3MF_ARCHIVE");
   assert.equal((await readdir(uploadDirectory)).length, 0);
-  assert.equal(MAX_STL_FILE_SIZE, 500 * 1024 * 1024);
+  assert.equal(MAX_UPLOAD_FILE_SIZE, 500 * 1024 * 1024);
 });
 
 test("rifiuta un file che supera 500 MB", async () => {
   const form = new FormData();
-  form.append("model", new Blob([new Uint8Array(MAX_STL_FILE_SIZE + 1)]), "troppo-grande.stl");
+  form.append("model", new Blob([new Uint8Array(MAX_UPLOAD_FILE_SIZE + 1)]), "troppo-grande.3mf");
 
   const response = await fetch(`${baseUrl}/api/custom-models/upload`, {
     method: "POST",
@@ -608,26 +557,26 @@ test("rifiuta un file che supera 500 MB", async () => {
   assert.equal((await readdir(uploadDirectory)).length, 0);
 });
 
-test("accetta soltanto link HTTPS dai siti autorizzati", async () => {
+test("accetta soltanto link HTTPS da MakerWorld", async () => {
   const allowedResponse = await fetch(`${baseUrl}/api/custom-models/link`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ url: "https://www.printables.com/model/123-prova" }),
+    body: JSON.stringify({ url: "https://makerworld.com/en/models/123-prova" }),
   });
   const deceptiveResponse = await fetch(`${baseUrl}/api/custom-models/link`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ url: "https://printables.com.example.org/model/123" }),
+    body: JSON.stringify({ url: "https://makerworld.com.example.org/en/models/123" }),
   });
   const httpResponse = await fetch(`${baseUrl}/api/custom-models/link`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ url: "http://thingiverse.com/thing:123" }),
+    body: JSON.stringify({ url: "http://makerworld.com/en/models/123" }),
   });
 
   const allowed = await allowedResponse.json();
   assert.equal(allowedResponse.status, 201);
-  assert.equal(allowed.data.sourceName, "Printables");
+  assert.equal(allowed.data.sourceName, "MakerWorld");
   assert.equal(deceptiveResponse.status, 400);
   assert.equal((await deceptiveResponse.json()).error.code, "LINK_NOT_ALLOWED");
   assert.equal(httpResponse.status, 400);
@@ -635,8 +584,8 @@ test("accetta soltanto link HTTPS dai siti autorizzati", async () => {
 });
 
 test("elimina gli upload temporanei scaduti", async () => {
-  const expiredFile = path.join(uploadDirectory, "expired.stl");
-  await writeFile(expiredFile, "solid expired");
+  const expiredFile = path.join(uploadDirectory, "expired.3mf");
+  await writeFile(expiredFile, "questo non e un 3mf valido");
   const expiredDate = new Date(Date.now() - UPLOAD_TTL_MS - 1000);
   await utimes(expiredFile, expiredDate, expiredDate);
 
@@ -708,17 +657,9 @@ test("conserva progetto Bambu 3MF, primo piatto e metadati nell'ordine", async (
 });
 
 test("crea una richiesta mista con snapshot e file permanente senza email automatica", async () => {
-  const stl = `solid order
-facet normal 0 0 1
-  outer loop
-    vertex 0 0 0
-    vertex 1 0 0
-    vertex 0 1 0
-  endloop
-endfacet
-endsolid order`;
+  const model3mf = await create3mfCubeBuffer(10);
   const uploadForm = new FormData();
-  uploadForm.append("model", new Blob([stl]), "ordine-personale.stl");
+  uploadForm.append("model", new Blob([model3mf], { type: "model/3mf" }), "ordine-personale.3mf");
   const uploadResponse = await fetch(`${baseUrl}/api/custom-models/upload`, {
     method: "POST",
     body: uploadForm,
@@ -771,7 +712,7 @@ endsolid order`;
   assert.equal(items[0].unit_price_cents, 1200);
   assert.equal(items[0].color_name, "Nero");
   assert.equal(items[1].item_type, "custom_file");
-  assert.equal(items[1].original_name, "ordine-personale.stl");
+  assert.equal(items[1].original_name, "ordine-personale.3mf");
   assert.equal(items[2].item_type, "custom_link");
   assert.equal(items[2].source_name, "MakerWorld");
 
@@ -862,9 +803,9 @@ test("gestisce l'invio SMTP opzionale dalle impostazioni amministrative", async 
   database.prepare("DELETE FROM orders WHERE code IN (?, ?)").run(sentCode, failedCode);
 });
 
-test("stima il costo di un modello STL dal volume misurato", async () => {
+test("stima il costo di un modello 3MF dal volume misurato", async () => {
   const form = new FormData();
-  form.append("model", new Blob([createBinaryStlCubeBuffer(10)], { type: "model/stl" }), "cubo.stl");
+  form.append("model", new Blob([await create3mfCubeBuffer(10)], { type: "model/3mf" }), "cubo.3mf");
   const uploadResponse = await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form });
   const upload = (await uploadResponse.json()).data;
   assert.equal(uploadResponse.status, 201);
@@ -873,7 +814,7 @@ test("stima il costo di un modello STL dal volume misurato", async () => {
   const quote = (await quoteResponse.json()).data;
   assert.equal(quoteResponse.status, 200);
   assert.equal(quote.id, upload.id);
-  assert.equal(quote.modelFormat, "stl");
+  assert.equal(quote.modelFormat, "3mf");
   assert.equal(quote.volumeMm3, 1000);
   assert.equal(quote.grams, 0.3);
   assert.equal(quote.hours, 0.26);
@@ -931,7 +872,7 @@ test("aggiorna i parametri di costo dalle impostazioni e li applica alle stime",
   assert.deepEqual((await updated.json()).data.pricing, customPricing);
 
   const form = new FormData();
-  form.append("model", new Blob([createBinaryStlCubeBuffer(10)], { type: "model/stl" }), "cubo-prezzo.stl");
+  form.append("model", new Blob([await create3mfCubeBuffer(10)], { type: "model/3mf" }), "cubo-prezzo.3mf");
   const upload = (await (await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form })).json()).data;
   const quote = (await (await fetch(`${baseUrl}/api/custom-models/${upload.id}/quote`)).json()).data;
   assert.equal(quote.unitPriceCents, 23);
@@ -1157,7 +1098,7 @@ test("rifiuta richieste manipolate senza creare record", async () => {
           type: "custom",
           sourceType: "file",
           id: "123e4567-e89b-42d3-a456-426614174000",
-          name: "mancante.stl",
+          name: "mancante.3mf",
           colorId: 1,
           quantity: 1,
         },
@@ -1171,7 +1112,7 @@ test("rifiuta richieste manipolate senza creare record", async () => {
         {
           type: "custom",
           sourceType: "link",
-          externalUrl: "https://printables.com.example.org/model/1",
+          externalUrl: "https://makerworld.com.example.org/model/1",
           colorId: 1,
           quantity: 1,
         },
@@ -1201,15 +1142,6 @@ test("gestisce prodotti, asset e colori senza alterare gli snapshot degli ordini
     ...options,
     headers: { cookie, ...(options.headers ?? {}) },
   });
-  const stl = `solid catalog
-facet normal 0 0 1
-  outer loop
-    vertex 0 0 0
-    vertex 1 0 0
-    vertex 0 1 0
-  endloop
-endfacet
-endsolid catalog`;
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 
   function productForm(overrides = {}) {
@@ -1253,12 +1185,12 @@ endsolid catalog`;
 
   const createForm = productForm();
   createForm.append("image", new Blob([png], { type: "image/png" }), "prodotto.png");
-  createForm.append("model", new Blob([stl], { type: "model/stl" }), "prodotto.stl");
+  createForm.append("model", new Blob([await create3mfBuffer()], { type: "model/3mf" }), "prodotto.3mf");
   const createResponse = await adminFetch("/api/admin/products", { method: "POST", body: createForm });
   const created = (await createResponse.json()).data;
   assert.equal(createResponse.status, 201);
   assert.match(created.imageUrl, /^\/catalog-assets\/[0-9a-f-]+\.png$/);
-  assert.match(created.modelUrl, /^\/catalog-assets\/[0-9a-f-]+\.stl$/);
+  assert.match(created.modelUrl, /^\/catalog-assets\/[0-9a-f-]+\.3mf$/);
   assert.equal((await fetch(`${baseUrl}${created.imageUrl}`)).status, 200);
   assert.equal((await fetch(`${baseUrl}${created.modelUrl}`)).status, 200);
 

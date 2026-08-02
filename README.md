@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **A personal app for collecting 3D print requests.**  
-Friends can pick a model from the catalog or upload an STL/3MF file, choose color and quantity, and submit a request. You manage everything from the Control Room.
+Friends can pick a model from the catalog or upload a 3MF file, choose color and quantity, and submit a request. You manage everything from the Control Room.
 
 > **Note:** this repository page and documentation are in English, but the application interface is currently available only in Italian.
 
@@ -26,9 +26,9 @@ Friends can pick a model from the catalog or upload an STL/3MF file, choose colo
 
 ## Features
 
-- **Public catalog** with products, colors, and a 3D viewer for STL models.
+- **Public catalog** with products, colors, and a 3D viewer for 3MF models.
 - **Guest or account requests**: users can order immediately or create an account to keep a personal history.
-- **Custom model upload**: STL or 3MF files up to 500 MB, or supported external links.
+- **Custom model upload**: 3MF files up to 500 MB, or MakerWorld links.
 - **Public tracking**: every request gets a unique code and a visible status (`pending`, `in progress`, `completed`, `delivered`).
 - **Control Room**: admin panel for managing orders, catalog, colors, and settings.
 - **Email notifications**: optional SMTP alert for every new order.
@@ -136,7 +136,7 @@ docker compose up -d
 - `GET /api/products`: visible products.
 - `GET /api/products/:id`: product detail.
 - `GET /api/colors`: active colors.
-- `POST /api/custom-models/upload`: temporary upload and inspection of an STL or 3MF file.
+- `POST /api/custom-models/upload`: temporary upload and inspection of a 3MF file.
 - `POST /api/custom-models/link`: validation of an external link.
 - `DELETE /api/custom-models/:id`: delete a temporary upload.
 - `POST /api/orders`: create a persistent request.

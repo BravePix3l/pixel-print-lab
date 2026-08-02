@@ -242,7 +242,7 @@ function createItemEditor(item) {
     if (item.itemType === "custom_file") {
       modelLink.hidden = false;
       modelLink.href = `/api/admin/orders/${currentOrder.id}/items/${item.id}/model`;
-      modelLink.textContent = `Scarica ${(item.modelFormat ?? "stl").toUpperCase()}`;
+      modelLink.textContent = `Scarica ${(item.modelFormat ?? "3mf").toUpperCase()}`;
       modelLink.download = item.originalName ?? "modello";
       const compatibility = item.modelMetadata?.compatibility;
       if (compatibility) modelLink.title = `Verifica piatto standard: ${compatibility.status}`;
@@ -304,7 +304,7 @@ function renderProductList() {
 function renderAssetSummary(product) {
   assetSummary.replaceChildren();
   if (!product) {
-    assetSummary.textContent = "L'immagine e obbligatoria. Il modello STL o 3MF e facoltativo.";
+    assetSummary.textContent = "L'immagine e obbligatoria. Il modello 3MF e facoltativo.";
     return;
   }
   const imageLink = document.createElement("a");
@@ -318,7 +318,8 @@ function renderAssetSummary(product) {
     modelLink.href = product.modelUrl;
     modelLink.target = "_blank";
     modelLink.rel = "noopener";
-    modelLink.textContent = `Apri ${product.modelUrl.toLowerCase().endsWith(".3mf") ? "3MF" : "STL"} attuale`;
+      modelLink.textContent = "Apri 3MF attuale";
+
     assetSummary.append(modelLink);
   }
 }

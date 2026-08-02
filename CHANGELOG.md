@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.0] - 2026-08-02
+
+### Changed
+
+- Limited custom model uploads and catalog assets to 3MF files only.
+- Limited external custom model links to MakerWorld.
+- Removed demo STL model URLs from migrated catalog data.
+- Updated public, cart, admin, viewer, and documentation copy to reflect the 3MF-only workflow.
+
+### Fixed
+
+- Updated tests and 3MF fixtures for the 3MF-only pricing and upload flow.
+
 ## [0.6.9] - 2026-07-25
 
 ### Added

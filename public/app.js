@@ -250,7 +250,7 @@ function createCartItem(item) {
     setText(
       element,
       "cart-code",
-      item.sourceType === "file" ? `${(item.modelFormat ?? "stl").toUpperCase()} personale` : `Link / ${item.sourceName}`,
+      item.sourceType === "file" ? `${(item.modelFormat ?? "3mf").toUpperCase()} personale` : `Link / ${item.sourceName}`,
     );
     setText(element, "cart-name", item.name);
     if (item.quoteUnitPriceCents) {
@@ -377,14 +377,14 @@ function updateCustomSource() {
 function validateSelectedFile() {
   const file = customFileInput.files[0];
   if (!file) {
-    throw new Error("Seleziona un file STL o 3MF.");
+    throw new Error("Seleziona un file 3MF.");
   }
   const lowerName = file.name.toLowerCase();
   if (lowerName.endsWith(".gcode.3mf")) {
     throw new Error("I file .gcode.3mf non sono supportati.");
   }
-  if (!lowerName.endsWith(".stl") && !lowerName.endsWith(".3mf")) {
-    throw new Error("Il file deve avere estensione .stl o .3mf.");
+  if (!lowerName.endsWith(".3mf")) {
+    throw new Error("Il file deve avere estensione .3mf.");
   }
   if (file.size === 0) {
     throw new Error("Il file modello e vuoto.");
@@ -396,7 +396,8 @@ function validateSelectedFile() {
 }
 
 function selectedModelFormat(file) {
-  return file.name.toLowerCase().endsWith(".3mf") ? "3mf" : "stl";
+  if (file.name.toLowerCase().endsWith(".3mf")) return "3mf";
+  throw new Error("Il file deve avere estensione .3mf.");
 }
 
 function uploadMatchesFile(upload, file) {
@@ -674,19 +675,14 @@ customPreviewButton.addEventListener("click", async () => {
     const customColorId = Number(customForm.elements.namedItem("custom-color").value);
     const customColor = colorsById.get(customColorId);
     const colorHex = customColor?.hexValue ?? "#ffffff";
-    if (selectedModelFormat(file) === "3mf") {
-      customPreviewButton.disabled = true;
-      customFeedback.textContent = "Controllo del progetto 3MF...";
-      inspectedUpload = await inspectedModelFor(file);
-      await openModelViewer(inspectedUpload, colorHex, colors);
-      const compatibility = inspectedUpload.inspection?.compatibility;
-      customFeedback.textContent = compatibility?.status === "incompatible"
-        ? compatibility.warnings[0]?.message ?? "Il progetto supera il volume della stampante."
-        : "Primo piatto pronto e compreso nel volume standard.";
-    } else {
-      const modelBuffer = await file.arrayBuffer();
-      await openModelViewer({ name: file.name, modelBuffer, modelFormat: "stl" }, colorHex, colors);
-    }
+    customPreviewButton.disabled = true;
+    customFeedback.textContent = "Controllo del progetto 3MF...";
+    inspectedUpload = await inspectedModelFor(file);
+    await openModelViewer(inspectedUpload, colorHex, colors);
+    const compatibility = inspectedUpload.inspection?.compatibility;
+    customFeedback.textContent = compatibility?.status === "incompatible"
+      ? compatibility.warnings[0]?.message ?? "Il progetto supera il volume della stampante."
+      : "Primo piatto pronto e compreso nel volume standard.";
   } catch (error) {
     customFeedback.textContent = error.message;
     customFeedback.classList.add("custom-feedback--error");
@@ -824,7 +820,7 @@ function serializeOrderItem(item) {
       sourceType: "file",
       id: item.id,
       name: item.name,
-      modelFormat: item.modelFormat ?? "stl",
+      modelFormat: item.modelFormat ?? "3mf",
       colorId: item.colorId,
       quantity: item.quantity,
     };

@@ -13,7 +13,7 @@ const IMAGE_LIMIT = 5 * 1024 * 1024;
 const ASSET_PREFIX = "/catalog-assets/";
 const extensions = {
   image: new Set([".jpg", ".jpeg", ".png", ".webp"]),
-  model: new Set([".stl", ".3mf"]),
+  model: new Set([".3mf"]),
 };
 
 export const defaultCatalogDirectory = path.join(currentDirectory, "..", "storage", "catalog");
@@ -90,7 +90,7 @@ export async function validateCatalogFiles(files = {}) {
       }
     }
     if (!validModel) {
-      throw new CatalogAssetError("INVALID_CATALOG_MODEL", "Il modello deve essere un file STL o 3MF valido e non superare 500 MB.");
+      throw new CatalogAssetError("INVALID_CATALOG_MODEL", "Il modello deve essere un file 3MF valido e non superare 500 MB.");
     }
   }
   return {
@@ -104,7 +104,7 @@ export function getUploadedPaths(files = {}) {
 }
 
 export function managedAssetPath(url, catalogDirectory = defaultCatalogDirectory) {
-  if (typeof url !== "string" || !/^\/catalog-assets\/[0-9a-f-]+\.(?:jpg|png|webp|stl|3mf)$/i.test(url)) return null;
+  if (typeof url !== "string" || !/^\/catalog-assets\/[0-9a-f-]+\.(?:jpg|png|webp|3mf)$/i.test(url)) return null;
   return path.join(catalogDirectory, path.basename(url));
 }
 

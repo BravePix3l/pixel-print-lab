@@ -75,18 +75,26 @@ test("rimuove configurazioni non piu disponibili", () => {
 });
 
 test("aggiunge un modello personale senza influire sul totale", () => {
+  const inspection = {
+    projectType: "generic",
+    plateCount: 1,
+    previewBuildItemIndexes: [0],
+    boundsMm: { size: [10, 10, 10] },
+  };
   const custom = {
     id: "123e4567-e89b-42d3-a456-426614174000",
     sourceType: "file",
-    name: "modello.stl",
-    modelUrl: "/uploads/123e4567-e89b-42d3-a456-426614174000.stl",
+    name: "modello.3mf",
+    modelUrl: "/uploads/123e4567-e89b-42d3-a456-426614174000.3mf",
+    modelFormat: "3mf",
+    inspection,
     colorId: 1,
     quantity: 2,
   };
   const cart = addCustomCartItem([], custom);
 
   assert.equal(cart[0].type, "custom");
-  assert.equal(cart[0].modelFormat, "stl");
+  assert.equal(cart[0].modelFormat, "3mf");
   assert.equal(cart[0].key, "custom:123e4567-e89b-42d3-a456-426614174000:1");
   assert.equal(calculateCartTotal(cart, new Map()), 0);
 });
@@ -120,20 +128,26 @@ test("conserva un progetto 3MF ispezionato e rifiuta formati incoerenti", () => 
   assert.deepEqual(parseStoredCart(JSON.stringify([{ ...cart[0], inspection: null }])), []);
 });
 
-test("ripristina gli upload STL salvati prima del campo formato", () => {
+test("ripristina gli upload 3MF salvati prima del campo formato", () => {
   const id = "123e4567-e89b-42d3-a456-426614174003";
   const legacy = {
     type: "custom",
     key: `custom:${id}:1`,
     id,
     sourceType: "file",
-    name: "legacy.stl",
-    modelUrl: `/uploads/${id}.stl`,
+    name: "legacy.3mf",
+    modelUrl: `/uploads/${id}.3mf`,
+    inspection: {
+      projectType: "generic",
+      plateCount: 1,
+      previewBuildItemIndexes: [0],
+      boundsMm: { size: [10, 10, 10] },
+    },
     colorId: 1,
     quantity: 1,
   };
 
-  assert.equal(parseStoredCart(JSON.stringify([legacy]))[0].modelFormat, "stl");
+  assert.equal(parseStoredCart(JSON.stringify([legacy]))[0].modelFormat, "3mf");
 });
 
 test("conserva link autorizzati e scarta link manipolati", () => {
@@ -141,16 +155,16 @@ test("conserva link autorizzati e scarta link manipolati", () => {
   const validLink = {
     id,
     sourceType: "link",
-    name: "Modello da Printables",
-    externalUrl: "https://www.printables.com/model/123",
-    sourceName: "Printables",
+    name: "Modello da MakerWorld",
+    externalUrl: "https://makerworld.com/en/models/123",
+    sourceName: "MakerWorld",
     colorId: 2,
     quantity: 1,
   };
   const cart = addCustomCartItem([], validLink);
   const restored = parseStoredCart(JSON.stringify(cart));
   const manipulated = parseStoredCart(
-    JSON.stringify([{ ...cart[0], externalUrl: "https://printables.com.example.org/model/123" }]),
+    JSON.stringify([{ ...cart[0], externalUrl: "https://makerworld.com.example.org/model/123" }]),
   );
 
   assert.deepEqual(restored, cart);
