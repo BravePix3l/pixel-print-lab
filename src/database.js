@@ -319,6 +319,35 @@ const migrations = [
       WHERE model_url IN ('/models/vaso-orbitale.stl', '/models/supporto-controller.stl');
     `,
   },
+  {
+    version: 14,
+    name: "add_pricing_correction_factors",
+    sql: `
+      ALTER TABLE app_settings
+      ADD COLUMN price_material_correction_factor REAL NOT NULL DEFAULT 2.4
+        CHECK (price_material_correction_factor > 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_time_correction_factor REAL NOT NULL DEFAULT 2.1
+        CHECK (price_time_correction_factor > 0);
+    `,
+  },
+  {
+    version: 15,
+    name: "add_order_item_actual_quote",
+    sql: `
+      ALTER TABLE order_items
+      ADD COLUMN actual_grams REAL
+        CHECK (actual_grams IS NULL OR actual_grams > 0);
+
+      ALTER TABLE order_items
+      ADD COLUMN actual_hours REAL
+        CHECK (actual_hours IS NULL OR actual_hours > 0);
+
+      ALTER TABLE order_items
+      ADD COLUMN actual_quote_json TEXT;
+    `,
+  },
 ];
 
 const products = [

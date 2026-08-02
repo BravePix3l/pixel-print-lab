@@ -14,7 +14,7 @@ import {
   defaultOrderFileDirectory,
   ORDER_STATUSES,
 } from "./order-routes.js";
-import { readPricingSettings, updatePricingSettings } from "./pricing.js";
+import { finalizeQuote, readPricingSettings, updatePricingSettings } from "./pricing.js";
 
 class AdminError extends Error {
   constructor(code, message, status = 400) {
@@ -143,6 +143,14 @@ function parseModelMetadata(value) {
   }
 }
 
+function parseJson(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
 const PRICING_RULES = [
   ["filamentPriceCentsPerKg", "Il costo della bobina", { integer: true, min: 0, max: 1_000_000 }],
   ["filamentDensityGCm3", "La densita del filamento", { min: 0.5, max: 3 }],
@@ -152,6 +160,8 @@ const PRICING_RULES = [
   ["machineHourlyCostCents", "Il costo orario della macchina", { integer: true, min: 0, max: 1_000_000 }],
   ["extrusionRateMm3PerSecond", "La velocita di estrusione", { min: 0.5, max: 50 }],
   ["overheadMinutes", "Il tempo fisso di preparazione", { integer: true, min: 0, max: 240 }],
+  ["materialCorrectionFactor", "Il fattore materiale", { min: 0.1, max: 10 }],
+  ["timeCorrectionFactor", "Il fattore tempo", { min: 0.1, max: 10 }],
   ["markupPercent", "Il margine", { min: 0, max: 500 }],
   ["minQuoteCents", "Il prezzo minimo", { integer: true, min: 0, max: 1_000_000 }],
 ];
@@ -171,8 +181,23 @@ function validatePricing(value) {
   return pricing;
 }
 
+function validateActualQuote(body) {
+  if (body?.clear === true) return null;
+  const grams = Number(body?.grams);
+  const hours = Number(body?.hours);
+  if (!Number.isFinite(grams) || grams <= 0 || grams > 100_000) {
+    throw new AdminError("INVALID_ACTUAL_QUOTE", "Il peso reale deve essere un numero positivo in grammi.");
+  }
+  if (!Number.isFinite(hours) || hours <= 0 || hours > 10_000) {
+    throw new AdminError("INVALID_ACTUAL_QUOTE", "Il tempo reale deve essere un numero positivo in ore.");
+  }
+  return { grams, hours };
+}
+
 function serializeItem(item) {
   const modelMetadata = parseModelMetadata(item.model_metadata_json);
+  const estimatedQuote = parseJson(item.quote_json);
+  const actualQuote = parseJson(item.actual_quote_json);
   return {
     id: item.id,
     position: item.position,
@@ -191,6 +216,10 @@ function serializeItem(item) {
     hasModel: Boolean(item.model_filename),
     modelFormat: item.model_format ?? (item.model_filename?.toLowerCase().endsWith(".3mf") ? "3mf" : item.model_filename ? "stl" : null),
     modelMetadata,
+    estimatedQuote,
+    actualGrams: item.actual_grams,
+    actualHours: item.actual_hours,
+    actualQuote,
   };
 }
 
@@ -248,6 +277,14 @@ export function registerAdminRoutes(
   const deleteColor = database.prepare("DELETE FROM colors WHERE id = ?");
   const updateOrderStatus = database.prepare(`
     UPDATE orders SET status = ? WHERE id = ?
+  `);
+  const updateItemActualQuote = database.prepare(`
+    UPDATE order_items SET
+      unit_price_cents = @unitPriceCents,
+      actual_grams = @actualGrams,
+      actual_hours = @actualHours,
+      actual_quote_json = @actualQuoteJson
+    WHERE id = @itemId AND order_id = @orderId AND item_type IN ('custom_file', 'custom_link')
   `);
   const getSettings = database.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1");
   const updateEmailNotifications = database.prepare(`
@@ -525,6 +562,31 @@ export function registerAdminRoutes(
         throw new AdminError("ORDER_NOT_FOUND", "Richiesta non trovata.", 404);
       }
       return response.json({ data: { id, status: request.body.status } });
+    } catch (error) {
+      return sendError(response, error);
+    }
+  });
+
+  app.patch("/api/admin/orders/:orderId/items/:itemId/actual-quote", requireAdmin, (request, response) => {
+    try {
+      const orderId = Number.parseInt(request.params.orderId, 10);
+      const itemId = Number.parseInt(request.params.itemId, 10);
+      const item = Number.isInteger(orderId) && Number.isInteger(itemId) ? findItem.get(itemId, orderId) : undefined;
+      if (!item) throw new AdminError("ORDER_ITEM_NOT_FOUND", "Elemento ordine non trovato.", 404);
+      if (!["custom_file", "custom_link"].includes(item.item_type)) {
+        throw new AdminError("INVALID_ACTUAL_QUOTE", "Il prezzo reale si puo impostare solo sui modelli personali.");
+      }
+      const actual = validateActualQuote(request.body);
+      const quote = actual ? finalizeQuote(actual, readPricingSettings(database)) : null;
+      updateItemActualQuote.run({
+        orderId,
+        itemId,
+        unitPriceCents: quote?.unitPriceCents ?? null,
+        actualGrams: actual?.grams ?? null,
+        actualHours: actual?.hours ?? null,
+        actualQuoteJson: quote ? JSON.stringify({ ...quote, source: "bambu_slicer" }) : null,
+      });
+      return response.json({ data: serializeItem(findItem.get(itemId, orderId)) });
     } catch (error) {
       return sendError(response, error);
     }

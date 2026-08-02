@@ -9,11 +9,13 @@ import {
 } from "./custom-model-routes.js";
 import {
   inspectModelFile,
+  measureModelFile,
   MODEL_FORMATS,
   ModelFileError,
   modelExtension,
   sanitizeOriginalModelName,
 } from "./model-files.js";
+import { calculateQuote, readPricingSettings } from "./pricing.js";
 
 import { RateLimiter, rateLimitMiddleware } from "./rate-limiter.js";
 
@@ -163,13 +165,13 @@ export function registerOrderRoutes(
     INSERT INTO order_items (
       order_id, position, item_type, product_id, product_code, product_name,
       unit_price_cents, color_id, color_name, color_hex, quantity,
-      original_name, source_name, external_url, model_filename
-      , model_format, model_metadata_json
+      original_name, source_name, external_url, model_filename,
+      model_format, model_metadata_json, quote_json
     ) VALUES (
       @orderId, @position, @itemType, @productId, @productCode, @productName,
       @unitPriceCents, @colorId, @colorName, @colorHex, @quantity,
-      @originalName, @sourceName, @externalUrl, @modelFilename
-      , @modelFormat, @modelMetadataJson
+      @originalName, @sourceName, @externalUrl, @modelFilename,
+      @modelFormat, @modelMetadataJson, @quoteJson
     )
   `);
   const saveOrder = database.transaction((order) => {
@@ -246,6 +248,7 @@ export function registerOrderRoutes(
             modelFilename: null,
             modelFormat: null,
             modelMetadataJson: null,
+            quoteJson: null,
           });
           continue;
         }
@@ -279,6 +282,10 @@ export function registerOrderRoutes(
             throw new OrderError("UPLOAD_EXPIRED", "Un file modello temporaneo e scaduto.", 410);
           }
           const modelMetadata = await inspectModelFile(temporaryFilename, modelFormat);
+          const measurements = await measureModelFile(temporaryFilename, modelFormat);
+          const quote = measurements.volumeMm3 > 0
+            ? calculateQuote(measurements.volumeMm3, readPricingSettings(database))
+            : null;
           const originalName = sanitizeOriginalModelName(item.name, modelFormat);
           validatedItems.push({
             itemType: "custom_file",
@@ -297,6 +304,7 @@ export function registerOrderRoutes(
             modelFormat,
             modelMetadata,
             modelMetadataJson: modelMetadata ? JSON.stringify(modelMetadata) : null,
+            quoteJson: quote ? JSON.stringify({ ...quote, volumeMm3: measurements.volumeMm3 }) : null,
             uploadId: item.id,
             temporaryFilename,
           });
@@ -331,6 +339,7 @@ export function registerOrderRoutes(
             modelFilename: null,
             modelFormat: null,
             modelMetadataJson: null,
+            quoteJson: null,
           });
           continue;
         }

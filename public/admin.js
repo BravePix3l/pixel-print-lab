@@ -19,6 +19,8 @@ const pricingInputs = {
   machineHourlyCostCents: document.querySelector("#pricing-machine-hour"),
   extrusionRateMm3PerSecond: document.querySelector("#pricing-extrusion"),
   overheadMinutes: document.querySelector("#pricing-overhead"),
+  materialCorrectionFactor: document.querySelector("#pricing-material-factor"),
+  timeCorrectionFactor: document.querySelector("#pricing-time-factor"),
   markupPercent: document.querySelector("#pricing-markup"),
   minQuoteCents: document.querySelector("#pricing-min-quote"),
 };
@@ -97,6 +99,19 @@ async function api(path, options = {}) {
 
 function formatDate(value) {
   return dateFormatter.format(new Date(`${value.replace(" ", "T")}Z`));
+}
+
+function formatHours(value) {
+  if (!Number.isFinite(value)) return "-";
+  const totalMinutes = Math.round(value * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours} h ${String(minutes).padStart(2, "0")} min` : `${minutes} min`;
+}
+
+function formatQuoteSummary(quote) {
+  if (!quote) return "Non calcolata";
+  return `${quote.grams} g / ${formatHours(quote.hours)} / ${euroFormatter.format(quote.unitPriceCents / 100)}`;
 }
 
 function showLogin() {
@@ -227,6 +242,12 @@ function createItemEditor(item) {
   const productField = element.querySelector('[data-field="product-field"]');
   const modelLink = element.querySelector('[data-field="model-link"]');
   const externalLink = element.querySelector('[data-field="external-link"]');
+  const quoteEditor = element.querySelector('[data-field="quote-editor"]');
+  const actualGramsInput = element.querySelector('[data-field="actual-grams"]');
+  const actualHoursInput = element.querySelector('[data-field="actual-hours"]');
+  const actualMinutesInput = element.querySelector('[data-field="actual-minutes"]');
+  const saveActualQuoteButton = element.querySelector('[data-field="save-actual-quote"]');
+  const clearActualQuoteButton = element.querySelector('[data-field="clear-actual-quote"]');
 
   element.dataset.itemId = item.id ?? "";
   element.dataset.itemType = item.itemType;
@@ -239,6 +260,56 @@ function createItemEditor(item) {
     element.querySelector('[data-field="product"]').textContent = item.productCode;
   } else {
     productField.hidden = true;
+    quoteEditor.hidden = false;
+    element.querySelector('[data-field="estimated-quote"]').textContent = formatQuoteSummary(item.estimatedQuote);
+    element.querySelector('[data-field="actual-quote"]').textContent = item.actualQuote
+      ? formatQuoteSummary(item.actualQuote)
+      : "Da definire";
+    actualGramsInput.value = item.actualGrams ?? "";
+    const totalMinutes = Number.isFinite(item.actualHours) ? Math.round(item.actualHours * 60) : null;
+    actualHoursInput.value = totalMinutes === null ? "" : Math.floor(totalMinutes / 60);
+    actualMinutesInput.value = totalMinutes === null ? "" : totalMinutes % 60;
+    saveActualQuoteButton.addEventListener("click", async () => {
+      saveActualQuoteButton.disabled = true;
+      orderFeedback.textContent = "";
+      orderFeedback.classList.remove("admin-feedback--error");
+      try {
+        await api(`/api/admin/orders/${currentOrder.id}/items/${item.id}/actual-quote`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            grams: Number(actualGramsInput.value),
+            hours: Number(actualHoursInput.value || 0) + Number(actualMinutesInput.value || 0) / 60,
+          }),
+        });
+        await loadOrder(currentOrder.id);
+        orderFeedback.textContent = "Dati reali slicer salvati.";
+      } catch (error) {
+        orderFeedback.textContent = error.message;
+        orderFeedback.classList.add("admin-feedback--error");
+      } finally {
+        saveActualQuoteButton.disabled = false;
+      }
+    });
+    clearActualQuoteButton.addEventListener("click", async () => {
+      clearActualQuoteButton.disabled = true;
+      orderFeedback.textContent = "";
+      orderFeedback.classList.remove("admin-feedback--error");
+      try {
+        await api(`/api/admin/orders/${currentOrder.id}/items/${item.id}/actual-quote`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ clear: true }),
+        });
+        await loadOrder(currentOrder.id);
+        orderFeedback.textContent = "Dati reali slicer rimossi.";
+      } catch (error) {
+        orderFeedback.textContent = error.message;
+        orderFeedback.classList.add("admin-feedback--error");
+      } finally {
+        clearActualQuoteButton.disabled = false;
+      }
+    });
     if (item.itemType === "custom_file") {
       modelLink.hidden = false;
       modelLink.href = `/api/admin/orders/${currentOrder.id}/items/${item.id}/model`;
@@ -258,11 +329,15 @@ function createItemEditor(item) {
 
 async function loadOrder(id) {
   currentOrder = await api(`/api/admin/orders/${id}`);
+  const orderItemsTotalCents = currentOrder.items.reduce(
+    (total, item) => total + (item.unitPriceCents ?? 0) * item.quantity,
+    0,
+  );
   orderEmpty.hidden = true;
   orderForm.hidden = false;
   orderDate.textContent = formatDate(currentOrder.createdAt);
   orderCode.textContent = currentOrder.code;
-  orderTotal.textContent = euroFormatter.format(currentOrder.catalogTotalCents / 100);
+  orderTotal.textContent = euroFormatter.format(orderItemsTotalCents / 100);
   orderStatusSelect.value = currentOrder.status;
   firstNameValue.textContent = currentOrder.firstName;
   lastNameValue.textContent = currentOrder.lastName;

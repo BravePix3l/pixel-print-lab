@@ -223,6 +223,14 @@
                 <input id="pricing-overhead" type="number" min="0" max="240" step="5" required>
               </label>
               <label class="settings-field">
+                <span>Correzione materiale</span>
+                <input id="pricing-material-factor" type="number" min="0.1" max="10" step="0.1" required>
+              </label>
+              <label class="settings-field">
+                <span>Correzione tempo</span>
+                <input id="pricing-time-factor" type="number" min="0.1" max="10" step="0.1" required>
+              </label>
+              <label class="settings-field">
                 <span>Margine (%)</span>
                 <input id="pricing-markup" type="number" min="0" max="500" step="1" required>
               </label>
@@ -231,7 +239,7 @@
                 <input id="pricing-min-quote" type="number" min="0" max="10000" step="0.5" required>
               </label>
             </div>
-            <p class="settings-hint">La stima pubblica misura il volume del modello e applica questi costi: materiale, energia, usura e margine. Il riempimento effettivo include infill e pareti.</p>
+            <p class="settings-hint">La stima pubblica misura il volume del modello e applica questi costi: materiale, energia, usura e margine. I fattori di correzione calibrano peso e tempo verso Bambu Studio senza falsare densita e parametri fisici.</p>
           </section>
           <p class="admin-feedback" id="settings-feedback" role="status"></p>
           <button class="save-order settings-save" type="submit">Salva impostazioni</button>
@@ -284,6 +292,17 @@
         <div class="admin-item__resource">
           <a data-field="model-link" hidden>Scarica modello</a>
           <a data-field="external-link" target="_blank" rel="noopener noreferrer" hidden>Apri link esterno</a>
+        </div>
+        <div class="admin-item__quote" data-field="quote-editor" hidden>
+          <div><span>Stima iniziale</span><p data-field="estimated-quote">Non calcolata</p></div>
+          <div><span>Prezzo confermato</span><p data-field="actual-quote">Da definire</p></div>
+          <label><span>Peso Bambu (g)</span><input data-field="actual-grams" type="number" min="0.01" max="100000" step="0.01"></label>
+          <label><span>Tempo Bambu (ore)</span><input data-field="actual-hours" type="number" min="0" max="10000" step="1"></label>
+          <label><span>Tempo Bambu (min)</span><input data-field="actual-minutes" type="number" min="0" max="59" step="1"></label>
+          <div class="admin-item__quote-actions">
+            <button data-field="save-actual-quote" type="button">Salva dati reali</button>
+            <button data-field="clear-actual-quote" type="button">Azzera</button>
+          </div>
         </div>
       </article>
     </template>

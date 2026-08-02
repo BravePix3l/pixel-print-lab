@@ -7,6 +7,8 @@ export const PRICING_DEFAULTS = {
   machineHourlyCostCents: 50,
   extrusionRateMm3PerSecond: 8,
   overheadMinutes: 15,
+  materialCorrectionFactor: 2.4,
+  timeCorrectionFactor: 2.1,
   markupPercent: 20,
   minQuoteCents: 500,
 };
@@ -35,10 +37,12 @@ export function calculateQuote(volumeMm3, pricing = PRICING_DEFAULTS) {
     throw new TypeError("Il volume del modello deve essere un numero positivo.");
   }
   const effectiveMm3 = volumeMm3 * (pricing.effectiveFillPercent / 100);
-  const grams = (effectiveMm3 / 1000) * pricing.filamentDensityGCm3;
-  const hours =
+  const baseGrams = (effectiveMm3 / 1000) * pricing.filamentDensityGCm3;
+  const baseHours =
     effectiveMm3 / (pricing.extrusionRateMm3PerSecond * 3600) +
     pricing.overheadMinutes / 60;
+  const grams = baseGrams * pricing.materialCorrectionFactor;
+  const hours = baseHours * pricing.timeCorrectionFactor;
   return finalizeQuote({ grams, hours }, pricing);
 }
 
@@ -52,6 +56,8 @@ const PRICING_SELECT = `
     price_machine_hourly_cents AS machineHourlyCostCents,
     price_extrusion_mm3_per_second AS extrusionRateMm3PerSecond,
     price_overhead_minutes AS overheadMinutes,
+    price_material_correction_factor AS materialCorrectionFactor,
+    price_time_correction_factor AS timeCorrectionFactor,
     price_markup_percent AS markupPercent,
     price_min_quote_cents AS minQuoteCents
   FROM app_settings
@@ -74,6 +80,8 @@ export function updatePricingSettings(database, pricing) {
       price_machine_hourly_cents = @machineHourlyCostCents,
       price_extrusion_mm3_per_second = @extrusionRateMm3PerSecond,
       price_overhead_minutes = @overheadMinutes,
+      price_material_correction_factor = @materialCorrectionFactor,
+      price_time_correction_factor = @timeCorrectionFactor,
       price_markup_percent = @markupPercent,
       price_min_quote_cents = @minQuoteCents,
       updated_at = CURRENT_TIMESTAMP

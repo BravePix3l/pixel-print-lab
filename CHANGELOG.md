@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 2026-08-02
+
+### Added
+
+- Material and time correction factors for the automatic 3MF estimate.
+- Admin fields to enter Bambu Studio real weight and print time per custom order item.
+- Confirmed custom item pricing based on real slicer data using the same pricing formula.
+
+### Changed
+
+- Stored the initial automatic estimate snapshot on custom file order items.
+- The Control Room order total now includes confirmed custom item prices.
+
 ## [1.0.0] - 2026-08-02
 
 ### Changed

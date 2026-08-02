@@ -150,6 +150,8 @@ const DEFAULT_PRICING = {
   machineHourlyCostCents: 50,
   extrusionRateMm3PerSecond: 8,
   overheadMinutes: 15,
+  materialCorrectionFactor: 2.4,
+  timeCorrectionFactor: 2.1,
   markupPercent: 20,
   minQuoteCents: 500,
 };
@@ -299,7 +301,7 @@ test("il seed puo essere eseguito piu volte senza duplicare dati", () => {
 
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM products").get().count, 2);
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM colors").get().count, 4);
-  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 13);
+  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 15);
   assert.equal(database.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
 });
 
@@ -361,7 +363,7 @@ test("migra un catalogo esistente senza perdere dati e impedisce il riuso degli 
     assert.match(legacyDatabase.prepare("SELECT sql FROM sqlite_master WHERE name = 'colors'").get().sql, /AUTOINCREMENT/);
     assert.equal(legacyDatabase.prepare("SELECT model_format FROM order_items WHERE id = 1").get().model_format, "stl");
     assert.equal(legacyDatabase.prepare("SELECT status FROM orders WHERE id = 1").get().status, "in_attesa");
-    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 13);
+    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 15);
     assert.equal(legacyDatabase.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
     assert.equal(legacyDatabase.prepare("SELECT admin_username FROM app_settings WHERE id = 1").get().admin_username, null);
     legacyDatabase.prepare("DELETE FROM products WHERE id = 7").run();
@@ -713,8 +715,21 @@ test("crea una richiesta mista con snapshot e file permanente senza email automa
   assert.equal(items[0].color_name, "Nero");
   assert.equal(items[1].item_type, "custom_file");
   assert.equal(items[1].original_name, "ordine-personale.3mf");
+  assert.equal(JSON.parse(items[1].quote_json).grams, 0.7);
   assert.equal(items[2].item_type, "custom_link");
   assert.equal(items[2].source_name, "MakerWorld");
+
+  const cookie = await authenticateAdmin();
+  const actualResponse = await fetch(`${baseUrl}/api/admin/orders/${order.id}/items/${items[1].id}/actual-quote`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ grams: 4.53, hours: 22.6 / 60 }),
+  });
+  const actual = (await actualResponse.json()).data;
+  assert.equal(actualResponse.status, 200);
+  assert.equal(actual.actualGrams, 4.53);
+  assert.equal(actual.actualQuote.unitPriceCents, 500);
+  assert.equal(database.prepare("SELECT unit_price_cents FROM order_items WHERE id = ?").get(items[1].id).unit_price_cents, 500);
 
   await stat(path.join(orderFileDirectory, items[1].model_filename));
   assert.equal((await fetch(`${baseUrl}${upload.modelUrl}`)).status, 404);
@@ -816,9 +831,9 @@ test("stima il costo di un modello 3MF dal volume misurato", async () => {
   assert.equal(quote.id, upload.id);
   assert.equal(quote.modelFormat, "3mf");
   assert.equal(quote.volumeMm3, 1000);
-  assert.equal(quote.grams, 0.3);
-  assert.equal(quote.hours, 0.26);
-  assert.deepEqual(quote.breakdown, { materialCents: 1, energyCents: 1, wearCents: 13 });
+  assert.equal(quote.grams, 0.7);
+  assert.equal(quote.hours, 0.54);
+  assert.deepEqual(quote.breakdown, { materialCents: 1, energyCents: 2, wearCents: 27 });
   assert.equal(quote.unitPriceCents, 500);
   assert.equal(quote.estimateOnly, true);
   await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
@@ -836,7 +851,7 @@ test("stima il costo di un modello 3MF dal volume misurato", async () => {
   assert.equal(quoteResponse.status, 200);
   assert.equal(quote.modelFormat, "3mf");
   assert.equal(quote.volumeMm3, 4000);
-  assert.equal(quote.grams, 1.2);
+  assert.equal(quote.grams, 3);
   assert.equal(quote.unitPriceCents, 500);
   await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
 });
@@ -875,8 +890,8 @@ test("aggiorna i parametri di costo dalle impostazioni e li applica alle stime",
   form.append("model", new Blob([await create3mfCubeBuffer(10)], { type: "model/3mf" }), "cubo-prezzo.3mf");
   const upload = (await (await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form })).json()).data;
   const quote = (await (await fetch(`${baseUrl}/api/custom-models/${upload.id}/quote`)).json()).data;
-  assert.equal(quote.unitPriceCents, 23);
-  assert.equal(quote.breakdown.materialCents, 9);
+  assert.equal(quote.unitPriceCents, 52);
+  assert.equal(quote.breakdown.materialCents, 22);
   await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
 
   const restored = await adminFetch("/api/admin/settings", {
