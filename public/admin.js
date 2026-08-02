@@ -10,6 +10,20 @@ const settingsForm = document.querySelector("#settings-form");
 const emailNotificationsInput = document.querySelector("#email-notifications-enabled");
 const smtpStatus = document.querySelector("#smtp-status");
 const settingsFeedback = document.querySelector("#settings-feedback");
+const slicerStatus = document.querySelector("#slicer-status");
+const pricingInputs = {
+  filamentPriceCentsPerKg: document.querySelector("#pricing-filament-price"),
+  filamentDensityGCm3: document.querySelector("#pricing-density"),
+  effectiveFillPercent: document.querySelector("#pricing-fill"),
+  printerPowerWatts: document.querySelector("#pricing-power"),
+  energyPriceCentsPerKwh: document.querySelector("#pricing-energy"),
+  machineHourlyCostCents: document.querySelector("#pricing-machine-hour"),
+  extrusionRateMm3PerSecond: document.querySelector("#pricing-extrusion"),
+  overheadMinutes: document.querySelector("#pricing-overhead"),
+  markupPercent: document.querySelector("#pricing-markup"),
+  minQuoteCents: document.querySelector("#pricing-min-quote"),
+};
+const pricingCentsFields = new Set(["filamentPriceCentsPerKg", "energyPriceCentsPerKwh", "machineHourlyCostCents", "minQuoteCents"]);
 const credentialsForm = document.querySelector("#credentials-form");
 const credentialsUsername = document.querySelector("#credentials-username");
 const credentialsCurrentPassword = document.querySelector("#credentials-current-password");
@@ -64,6 +78,7 @@ let colors = [];
 let currentOrder;
 let selectedProductId;
 let currentSection = "orders";
+let slicerConfigured = false;
 const orderStatusLabels = {
   in_attesa: "In attesa",
   in_lavorazione: "In lavorazione",
@@ -110,10 +125,28 @@ async function loadSettings() {
     ? `SMTP configurato. Destinatario: ${settings.smtpRecipient}`
     : "SMTP non configurato. Aggiungi le variabili richieste prima di attivare l'invio.";
   smtpStatus.dataset.configured = String(settings.smtpConfigured);
+  for (const [field, input] of Object.entries(pricingInputs)) {
+    const value = settings.pricing?.[field];
+    input.value = pricingCentsFields.has(field) ? (value / 100).toFixed(2) : value;
+  }
+  slicerConfigured = Boolean(settings.slicerConfigured);
+  slicerStatus.textContent = slicerConfigured
+    ? "Stima precisa attiva: PrusaSlicer configurato, disponibile sugli ordini con file modello."
+    : "Stima precisa non attiva: configura la variabile PRUSASLICER_PATH con il percorso dell'eseguibile PrusaSlicer.";
+  slicerStatus.dataset.configured = String(slicerConfigured);
   credentialsForm.reset();
   credentialsUsername.value = settings.adminUsername;
   credentialsFeedback.textContent = "";
   credentialsFeedback.classList.remove("admin-feedback--error");
+}
+
+function readPricingForm() {
+  const pricing = {};
+  for (const [field, input] of Object.entries(pricingInputs)) {
+    const value = Number(input.value);
+    pricing[field] = pricingCentsFields.has(field) ? Math.round(value * 100) : value;
+  }
+  return pricing;
 }
 
 function renderOrderList() {
@@ -196,11 +229,18 @@ async function loadArchive() {
   }
 }
 
+function formatQuoteResult(item, quote) {
+  const total = euroFormatter.format((quote.unitPriceCents * item.quantity) / 100);
+  return `Stima precisa (${quote.source}): ${quote.grams} g, ~${quote.hours} h, ${euroFormatter.format(quote.unitPriceCents / 100)} al pezzo, ${total} per ${item.quantity} pz. Materiale ${euroFormatter.format(quote.breakdown.materialCents / 100)} + energia ${euroFormatter.format(quote.breakdown.energyCents / 100)} + usura ${euroFormatter.format(quote.breakdown.wearCents / 100)}.`;
+}
+
 function createItemEditor(item) {
   const element = adminItemTemplate.content.firstElementChild.cloneNode(true);
   const productField = element.querySelector('[data-field="product-field"]');
   const modelLink = element.querySelector('[data-field="model-link"]');
   const externalLink = element.querySelector('[data-field="external-link"]');
+  const quoteButton = element.querySelector('[data-field="precise-quote"]');
+  const quoteResult = element.querySelector('[data-field="quote-result"]');
 
   element.dataset.itemId = item.id ?? "";
   element.dataset.itemType = item.itemType;
@@ -220,6 +260,29 @@ function createItemEditor(item) {
       modelLink.download = item.originalName ?? "modello";
       const compatibility = item.modelMetadata?.compatibility;
       if (compatibility) modelLink.title = `Verifica piatto standard: ${compatibility.status}`;
+      if (item.preciseQuote) {
+        quoteResult.hidden = false;
+        quoteResult.textContent = formatQuoteResult(item, item.preciseQuote);
+      }
+      if (slicerConfigured) {
+        quoteButton.hidden = false;
+        quoteButton.addEventListener("click", async () => {
+          quoteButton.disabled = true;
+          quoteButton.textContent = "Slicing...";
+          try {
+            const quote = await api(`/api/admin/orders/${currentOrder.id}/items/${item.id}/precise-quote`, { method: "POST" });
+            item.preciseQuote = quote;
+            quoteResult.hidden = false;
+            quoteResult.textContent = formatQuoteResult(item, quote);
+          } catch (error) {
+            quoteResult.hidden = false;
+            quoteResult.textContent = error.message;
+          } finally {
+            quoteButton.disabled = false;
+            quoteButton.textContent = "Stima precisa";
+          }
+        });
+      }
     }
     if (item.itemType === "custom_link") {
       externalLink.hidden = false;
@@ -278,7 +341,7 @@ function renderProductList() {
 function renderAssetSummary(product) {
   assetSummary.replaceChildren();
   if (!product) {
-    assetSummary.textContent = "L'immagine e obbligatoria. Il modello STL e facoltativo.";
+    assetSummary.textContent = "L'immagine e obbligatoria. Il modello STL o 3MF e facoltativo.";
     return;
   }
   const imageLink = document.createElement("a");
@@ -292,7 +355,7 @@ function renderAssetSummary(product) {
     modelLink.href = product.modelUrl;
     modelLink.target = "_blank";
     modelLink.rel = "noopener";
-    modelLink.textContent = "Apri STL attuale";
+    modelLink.textContent = `Apri ${product.modelUrl.toLowerCase().endsWith(".3mf") ? "3MF" : "STL"} attuale`;
     assetSummary.append(modelLink);
   }
 }
@@ -470,7 +533,10 @@ settingsForm.addEventListener("submit", async (event) => {
     await api("/api/admin/settings", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ emailNotificationsEnabled: emailNotificationsInput.checked }),
+      body: JSON.stringify({
+        emailNotificationsEnabled: emailNotificationsInput.checked,
+        pricing: readPricingForm(),
+      }),
     });
     settingsFeedback.textContent = "Impostazioni salvate.";
     await loadSettings();

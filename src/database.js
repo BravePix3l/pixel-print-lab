@@ -257,6 +257,59 @@ const migrations = [
       CREATE INDEX orders_account_created_idx ON orders (user_account_id, created_at DESC, id DESC);
     `,
   },
+  {
+    version: 11,
+    name: "add_pricing_settings",
+    sql: `
+      ALTER TABLE app_settings
+      ADD COLUMN price_filament_cents_per_kg INTEGER NOT NULL DEFAULT 2000
+        CHECK (price_filament_cents_per_kg >= 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_filament_density_g_cm3 REAL NOT NULL DEFAULT 1.24
+        CHECK (price_filament_density_g_cm3 > 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_effective_fill_percent REAL NOT NULL DEFAULT 25
+        CHECK (price_effective_fill_percent BETWEEN 1 AND 100);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_printer_power_watts INTEGER NOT NULL DEFAULT 150
+        CHECK (price_printer_power_watts > 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_energy_cents_per_kwh INTEGER NOT NULL DEFAULT 30
+        CHECK (price_energy_cents_per_kwh >= 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_machine_hourly_cents INTEGER NOT NULL DEFAULT 50
+        CHECK (price_machine_hourly_cents >= 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_extrusion_mm3_per_second REAL NOT NULL DEFAULT 8
+        CHECK (price_extrusion_mm3_per_second > 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_overhead_minutes INTEGER NOT NULL DEFAULT 15
+        CHECK (price_overhead_minutes >= 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_markup_percent REAL NOT NULL DEFAULT 20
+        CHECK (price_markup_percent >= 0);
+
+      ALTER TABLE app_settings
+      ADD COLUMN price_min_quote_cents INTEGER NOT NULL DEFAULT 500
+        CHECK (price_min_quote_cents >= 0);
+    `,
+  },
+  {
+    version: 12,
+    name: "add_order_item_quote",
+    sql: `
+      ALTER TABLE order_items
+      ADD COLUMN quote_json TEXT;
+    `,
+  },
 ];
 
 const products = [

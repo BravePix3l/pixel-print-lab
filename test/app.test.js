@@ -14,6 +14,7 @@ import {
 } from "../src/custom-model-routes.js";
 import { migrateDatabase, openDatabase, seedDatabase } from "../src/database.js";
 import { createEmailService } from "../src/email-service.js";
+import { SlicerError } from "../src/slicer-quote.js";
 
 let server;
 let baseUrl;
@@ -24,6 +25,8 @@ let catalogDirectory;
 let sentEmails;
 let rejectEmails;
 let emailService;
+let slicerConfigured;
+let slicerBehavior;
 
 before(async () => {
   uploadDirectory = await mkdtemp(path.join(tmpdir(), "pixel-print-lab-test-"));
@@ -39,6 +42,10 @@ before(async () => {
       sentEmails.push(message);
     },
   };
+  slicerConfigured = false;
+  slicerBehavior = async () => {
+    throw new Error("Comportamento slicer non impostato dal test");
+  };
   database = openDatabase(":memory:");
   seedDatabase(database);
   server = createApp({
@@ -49,6 +56,12 @@ before(async () => {
     adminUsername: "test-admin",
     adminPassword: "test-admin-password",
     emailService,
+    slicerService: {
+      get configured() {
+        return slicerConfigured;
+      },
+      slice: (modelPath) => slicerBehavior(modelPath),
+    },
     uploadRateLimit: false,
     orderRateLimit: false,
     disableAuthRateLimits: true,
@@ -140,6 +153,42 @@ function create3mfBuffer({ bambu = false, gcode = false, malformedModel = false,
   });
 }
 
+function createBinaryStlCubeBuffer(size = 10) {
+  const points = [
+    [0, 0, 0], [size, 0, 0], [size, size, 0], [0, size, 0],
+    [0, 0, size], [size, 0, size], [size, size, size], [0, size, size],
+  ];
+  const faces = [
+    [0, 3, 2], [0, 2, 1], [4, 5, 6], [4, 6, 7],
+    [0, 1, 5], [0, 5, 4], [2, 3, 7], [2, 7, 6],
+    [1, 2, 6], [1, 6, 5], [0, 4, 7], [0, 7, 3],
+  ];
+  const buffer = Buffer.alloc(84 + faces.length * 50);
+  buffer.writeUInt32LE(faces.length, 80);
+  faces.forEach((face, index) => {
+    const offset = 84 + index * 50;
+    face.forEach((vertexIndex, corner) => {
+      buffer.writeFloatLE(points[vertexIndex][0], offset + 12 + corner * 12);
+      buffer.writeFloatLE(points[vertexIndex][1], offset + 16 + corner * 12);
+      buffer.writeFloatLE(points[vertexIndex][2], offset + 20 + corner * 12);
+    });
+  });
+  return buffer;
+}
+
+const DEFAULT_PRICING = {
+  filamentPriceCentsPerKg: 2000,
+  filamentDensityGCm3: 1.24,
+  effectiveFillPercent: 25,
+  printerPowerWatts: 150,
+  energyPriceCentsPerKwh: 30,
+  machineHourlyCostCents: 50,
+  extrusionRateMm3PerSecond: 8,
+  overheadMinutes: 15,
+  markupPercent: 20,
+  minQuoteCents: 500,
+};
+
 test("espone lo stato di salute del server", async () => {
   const response = await fetch(`${baseUrl}/api/health`);
 
@@ -165,7 +214,7 @@ test("serve la pagina pubblica con un catalogo accessibile", async () => {
   assert.match(page, /id="request-list"/);
   assert.match(page, /id="request-template"/);
   assert.match(page, /href="#stato-ordini"/);
-  assert.ok(page.indexOf('id="product-list"') < page.indexOf('id="stato-ordini"'));
+  assert.ok(page.indexOf('id="stato-ordini"') < page.indexOf('id="product-list"'));
   assert.match(page, /id="product-template"/);
   assert.match(page, /id="cart-dialog"/);
   assert.match(page, /id="cart-item-template"/);
@@ -289,7 +338,7 @@ test("il seed puo essere eseguito piu volte senza duplicare dati", () => {
 
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM products").get().count, 2);
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM colors").get().count, 4);
-  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 10);
+  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 12);
   assert.equal(database.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
 });
 
@@ -351,7 +400,7 @@ test("migra un catalogo esistente senza perdere dati e impedisce il riuso degli 
     assert.match(legacyDatabase.prepare("SELECT sql FROM sqlite_master WHERE name = 'colors'").get().sql, /AUTOINCREMENT/);
     assert.equal(legacyDatabase.prepare("SELECT model_format FROM order_items WHERE id = 1").get().model_format, "stl");
     assert.equal(legacyDatabase.prepare("SELECT status FROM orders WHERE id = 1").get().status, "in_attesa");
-    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 10);
+    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 12);
     assert.equal(legacyDatabase.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
     assert.equal(legacyDatabase.prepare("SELECT admin_username FROM app_settings WHERE id = 1").get().admin_username, null);
     legacyDatabase.prepare("DELETE FROM products WHERE id = 7").run();
@@ -554,10 +603,10 @@ test("rifiuta estensioni e contenuti STL non validi", async () => {
   assert.equal(contentResponse.status, 400);
   assert.equal((await contentResponse.json()).error.code, "INVALID_STL_CONTENT");
   assert.equal((await readdir(uploadDirectory)).length, 0);
-  assert.equal(MAX_STL_FILE_SIZE, 50 * 1024 * 1024);
+  assert.equal(MAX_STL_FILE_SIZE, 100 * 1024 * 1024);
 });
 
-test("rifiuta un file che supera 50 MB", async () => {
+test("rifiuta un file che supera 100 MB", async () => {
   const form = new FormData();
   form.append("model", new Blob([new Uint8Array(MAX_STL_FILE_SIZE + 1)]), "troppo-grande.stl");
 
@@ -758,6 +807,8 @@ test("gestisce l'invio SMTP opzionale dalle impostazioni amministrative", async 
     smtpRecipient: "ordini@example.test",
     adminUsername: "test-admin",
     adminCredentialsCustomized: false,
+    pricing: DEFAULT_PRICING,
+    slicerConfigured: false,
   });
 
   const invalid = await adminFetch("/api/admin/settings", {
@@ -823,6 +874,158 @@ test("gestisce l'invio SMTP opzionale dalle impostazioni amministrative", async 
   });
   assert.equal(disabled.status, 200);
   database.prepare("DELETE FROM orders WHERE code IN (?, ?)").run(sentCode, failedCode);
+});
+
+test("stima il costo di un modello STL dal volume misurato", async () => {
+  const form = new FormData();
+  form.append("model", new Blob([createBinaryStlCubeBuffer(10)], { type: "model/stl" }), "cubo.stl");
+  const uploadResponse = await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form });
+  const upload = (await uploadResponse.json()).data;
+  assert.equal(uploadResponse.status, 201);
+
+  const quoteResponse = await fetch(`${baseUrl}/api/custom-models/${upload.id}/quote`);
+  const quote = (await quoteResponse.json()).data;
+  assert.equal(quoteResponse.status, 200);
+  assert.equal(quote.id, upload.id);
+  assert.equal(quote.modelFormat, "stl");
+  assert.equal(quote.volumeMm3, 1000);
+  assert.equal(quote.grams, 0.3);
+  assert.equal(quote.hours, 0.26);
+  assert.deepEqual(quote.breakdown, { materialCents: 1, energyCents: 1, wearCents: 13 });
+  assert.equal(quote.unitPriceCents, 500);
+  assert.equal(quote.estimateOnly, true);
+  await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
+});
+
+test("stima il costo di un modello 3MF dal volume misurato", async () => {
+  const form = new FormData();
+  form.append("model", new Blob([await create3mfBuffer()], { type: "model/3mf" }), "tetra.3mf");
+  const uploadResponse = await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form });
+  const upload = (await uploadResponse.json()).data;
+  assert.equal(uploadResponse.status, 201);
+
+  const quoteResponse = await fetch(`${baseUrl}/api/custom-models/${upload.id}/quote`);
+  const quote = (await quoteResponse.json()).data;
+  assert.equal(quoteResponse.status, 200);
+  assert.equal(quote.modelFormat, "3mf");
+  assert.equal(quote.volumeMm3, 4000);
+  assert.equal(quote.grams, 1.2);
+  assert.equal(quote.unitPriceCents, 500);
+  await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
+});
+
+test("risponde 404 alla stima di un upload inesistente e 400 a un identificativo non valido", async () => {
+  const missing = await fetch(`${baseUrl}/api/custom-models/${crypto.randomUUID()}/quote`);
+  assert.equal(missing.status, 404);
+  const invalid = await fetch(`${baseUrl}/api/custom-models/non-un-uuid/quote`);
+  assert.equal(invalid.status, 400);
+});
+
+test("aggiorna i parametri di costo dalle impostazioni e li applica alle stime", async () => {
+  const cookie = await authenticateAdmin();
+  const adminFetch = (pathName, options = {}) => fetch(`${baseUrl}${pathName}`, {
+    ...options,
+    headers: { cookie, ...(options.headers ?? {}) },
+  });
+
+  const invalidPricing = await adminFetch("/api/admin/settings", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ emailNotificationsEnabled: false, pricing: { ...DEFAULT_PRICING, markupPercent: -5 } }),
+  });
+  assert.equal(invalidPricing.status, 400);
+
+  const customPricing = { ...DEFAULT_PRICING, filamentPriceCentsPerKg: 30000, minQuoteCents: 0, markupPercent: 0 };
+  const updated = await adminFetch("/api/admin/settings", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ emailNotificationsEnabled: false, pricing: customPricing }),
+  });
+  assert.equal(updated.status, 200);
+  assert.deepEqual((await updated.json()).data.pricing, customPricing);
+
+  const form = new FormData();
+  form.append("model", new Blob([createBinaryStlCubeBuffer(10)], { type: "model/stl" }), "cubo-prezzo.stl");
+  const upload = (await (await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form })).json()).data;
+  const quote = (await (await fetch(`${baseUrl}/api/custom-models/${upload.id}/quote`)).json()).data;
+  assert.equal(quote.unitPriceCents, 50);
+  assert.equal(quote.breakdown.materialCents, 9);
+  await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
+
+  const restored = await adminFetch("/api/admin/settings", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ emailNotificationsEnabled: false, pricing: DEFAULT_PRICING }),
+  });
+  assert.equal(restored.status, 200);
+});
+
+test("calcola e conserva la stima precisa con lo slicer lato amministratore", async () => {
+  const uploadForm = new FormData();
+  uploadForm.append("model", new Blob([createBinaryStlCubeBuffer(20)], { type: "model/stl" }), "pezzo.stl");
+  const upload = (await (await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: uploadForm })).json()).data;
+  const orderResponse = await fetch(`${baseUrl}/api/orders`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      firstName: "Sara",
+      lastName: "Slicer",
+      items: [
+        { type: "custom", sourceType: "file", id: upload.id, name: upload.name, modelFormat: "stl", colorId: 1, quantity: 2 },
+        { type: "catalog", productId: 1, colorId: 1, quantity: 1 },
+      ],
+    }),
+  });
+  assert.equal(orderResponse.status, 201);
+  const code = (await orderResponse.json()).data.code;
+  const order = database.prepare("SELECT * FROM orders WHERE code = ?").get(code);
+  const cookie = await authenticateAdmin();
+  const adminFetch = (pathName, options = {}) => fetch(`${baseUrl}${pathName}`, {
+    ...options,
+    headers: { cookie, ...(options.headers ?? {}) },
+  });
+  const detail = (await (await adminFetch(`/api/admin/orders/${order.id}`)).json()).data;
+  const fileItem = detail.items.find((item) => item.itemType === "custom_file");
+  const catalogItem = detail.items.find((item) => item.itemType === "catalog");
+  assert.equal(fileItem.preciseQuote, null);
+
+  const notConfigured = await adminFetch(`/api/admin/orders/${order.id}/items/${fileItem.id}/precise-quote`, { method: "POST" });
+  assert.equal(notConfigured.status, 503);
+  assert.equal((await notConfigured.json()).error.code, "SLICER_NOT_CONFIGURED");
+
+  const noModel = await adminFetch(`/api/admin/orders/${order.id}/items/${catalogItem.id}/precise-quote`, { method: "POST" });
+  assert.equal(noModel.status, 404);
+
+  slicerConfigured = true;
+  slicerBehavior = async (modelPath) => {
+    assert.ok((await stat(modelPath)).isFile());
+    return { grams: 12.3, seconds: 5430 };
+  };
+  const quoteResponse = await adminFetch(`/api/admin/orders/${order.id}/items/${fileItem.id}/precise-quote`, { method: "POST" });
+  const quote = (await quoteResponse.json()).data;
+  assert.equal(quoteResponse.status, 200);
+  assert.equal(quote.grams, 12.3);
+  assert.equal(quote.hours, 1.51);
+  assert.equal(quote.seconds, 5430);
+  assert.deepEqual(quote.breakdown, { materialCents: 25, energyCents: 7, wearCents: 75 });
+  assert.equal(quote.unitPriceCents, 500);
+  assert.equal(quote.source, "prusaslicer");
+  assert.ok(quote.createdAt);
+
+  const persisted = (await (await adminFetch(`/api/admin/orders/${order.id}`)).json()).data;
+  const persistedItem = persisted.items.find((item) => item.id === fileItem.id);
+  assert.equal(persistedItem.preciseQuote.unitPriceCents, 500);
+  assert.equal(persistedItem.preciseQuote.source, "prusaslicer");
+
+  slicerBehavior = async () => {
+    throw new SlicerError("SLICER_FAILED", "PrusaSlicer non e riuscito a processare il modello (codice 1).", 422);
+  };
+  const failed = await adminFetch(`/api/admin/orders/${order.id}/items/${fileItem.id}/precise-quote`, { method: "POST" });
+  assert.equal(failed.status, 422);
+  assert.equal((await failed.json()).error.code, "SLICER_FAILED");
+  slicerConfigured = false;
+
+  assert.equal((await adminFetch(`/api/admin/orders/${order.id}`, { method: "DELETE" })).status, 204);
 });
 
 test("rispetta il limite di 15 ordini in lavorazione", async () => {
@@ -1218,6 +1421,44 @@ endsolid catalog`;
   const deleteColorResponse = await adminFetch(`/api/admin/colors/${color.id}`, { method: "DELETE" });
   assert.equal(deleteColorResponse.status, 200);
   assert.equal((await deleteColorResponse.json()).data.some((c) => c.id === color.id), false);
+});
+
+test("accetta un modello 3MF per i prodotti del catalogo", async () => {
+  const cookie = await authenticateAdmin();
+  const adminFetch = (pathName, options = {}) => fetch(`${baseUrl}${pathName}`, {
+    ...options,
+    headers: { cookie, ...(options.headers ?? {}) },
+  });
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+  const productValues = {
+    code: "MOD_3MF", slug: "prodotto-3mf", name: "Prodotto 3MF", category: "Test",
+    description: "Prodotto con modello 3MF.", priceCents: "1500", imageAlt: "Immagine 3MF",
+    dimensionLabel: "Altezza", dimensionValue: "5 cm", material: "PLA",
+    visible: "true", sortOrder: "95", removeModel: "false",
+  };
+  const buildForm = () => {
+    const form = new FormData();
+    Object.entries(productValues).forEach(([key, value]) => form.append(key, value));
+    form.append("image", new Blob([png], { type: "image/png" }), "prodotto-3mf.png");
+    return form;
+  };
+
+  const createForm = buildForm();
+  createForm.append("model", new Blob([await create3mfBuffer()], { type: "model/3mf" }), "prodotto.3mf");
+  const createResponse = await adminFetch("/api/admin/products", { method: "POST", body: createForm });
+  const created = (await createResponse.json()).data;
+  assert.equal(createResponse.status, 201);
+  assert.match(created.modelUrl, /^\/catalog-assets\/[0-9a-f-]+\.3mf$/);
+  assert.equal((await fetch(`${baseUrl}${created.modelUrl}`)).status, 200);
+
+  const malformedForm = buildForm();
+  malformedForm.append("model", new Blob(["non un archivio"]), "rotto.3mf");
+  const malformedResponse = await adminFetch("/api/admin/products", { method: "POST", body: malformedForm });
+  assert.equal(malformedResponse.status, 400);
+  assert.equal((await malformedResponse.json()).error.code, "INVALID_CATALOG_MODEL");
+
+  assert.equal((await adminFetch(`/api/admin/products/${created.id}`, { method: "DELETE" })).status, 204);
+  await assert.rejects(stat(path.join(catalogDirectory, path.basename(created.modelUrl))), { code: "ENOENT" });
 });
 
 test("gestisce account, storico personale e accesso amministrativo unificato", async () => {

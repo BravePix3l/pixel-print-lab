@@ -10,9 +10,11 @@ import {
   inspectModelFile,
   isValidStlFile,
   MAX_MODEL_FILE_SIZE,
+  measureModelFile,
   ModelFileError,
   modelContentType,
 } from "./model-files.js";
+import { calculateQuote, readPricingSettings } from "./pricing.js";
 import { RateLimiter, rateLimitMiddleware } from "./rate-limiter.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -43,7 +45,7 @@ function sendError(response, error) {
       error: {
         code: fileTooLarge ? "MODEL_TOO_LARGE" : "INVALID_UPLOAD",
         message: fileTooLarge
-          ? "Il file modello non puo superare 50 MB."
+          ? "Il file modello non puo superare 100 MB."
           : "La richiesta di caricamento non e valida.",
       },
     });
@@ -108,7 +110,7 @@ export async function cleanupExpiredUploads(uploadDirectory, now = Date.now()) {
 
 export function registerCustomModelRoutes(
   app,
-  { uploadDirectory = defaultUploadDirectory, uploadRateLimit = { windowMs: 15 * 60 * 1000, max: 20 } } = {},
+  { uploadDirectory = defaultUploadDirectory, uploadRateLimit = { windowMs: 15 * 60 * 1000, max: 20 }, database } = {},
 ) {
   mkdirSync(uploadDirectory, { recursive: true });
   cleanupExpiredUploads(uploadDirectory).catch((error) => {
@@ -198,6 +200,50 @@ export function registerCustomModelRoutes(
           id: crypto.randomUUID(),
           name: `Modello da ${link.sourceName}`,
           ...link,
+        },
+      });
+    } catch (error) {
+      return sendError(response, error);
+    }
+  });
+
+  app.get("/api/custom-models/:id/quote", uploadRateLimitMiddleware, async (request, response) => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request.params.id)) {
+      return sendError(response, new CustomModelError("INVALID_UPLOAD_ID", "Upload non valido."));
+    }
+
+    try {
+      let modelPath;
+      let modelFormat;
+      for (const format of ["stl", "3mf"]) {
+        const candidate = path.join(uploadDirectory, `${request.params.id}.${format}`);
+        const fileStats = await stat(candidate).catch(() => null);
+        if (fileStats?.isFile()) {
+          modelPath = candidate;
+          modelFormat = format;
+          break;
+        }
+      }
+      if (!modelPath) {
+        throw new CustomModelError("UPLOAD_NOT_FOUND", "Il file temporaneo non esiste piu.", 404);
+      }
+      const measurements = await measureModelFile(modelPath, modelFormat);
+      if (!measurements.volumeMm3 || measurements.volumeMm3 <= 0) {
+        throw new CustomModelError(
+          "MODEL_VOLUME_UNAVAILABLE",
+          "Non e stato possibile stimare il volume del modello: la geometria potrebbe essere aperta o degenere.",
+          422,
+        );
+      }
+      const quote = calculateQuote(measurements.volumeMm3, readPricingSettings(database));
+      return response.json({
+        data: {
+          id: request.params.id,
+          modelFormat,
+          volumeMm3: measurements.volumeMm3,
+          boundsMm: measurements.boundsMm,
+          ...quote,
+          estimateOnly: true,
         },
       });
     } catch (error) {

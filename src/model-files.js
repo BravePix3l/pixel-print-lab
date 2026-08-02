@@ -1,16 +1,16 @@
-import { open, stat } from "node:fs/promises";
+import { open, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { SaxesParser } from "saxes";
 import yauzl from "yauzl";
 
-export const MAX_MODEL_FILE_SIZE = 50 * 1024 * 1024;
+export const MAX_MODEL_FILE_SIZE = 100 * 1024 * 1024;
 export const MODEL_FORMATS = new Set(["stl", "3mf"]);
 
 const MAX_ARCHIVE_ENTRIES = 256;
-const MAX_ARCHIVE_ENTRY_SIZE = 25 * 1024 * 1024;
-const MAX_ARCHIVE_TOTAL_SIZE = 30 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRY_SIZE = 50 * 1024 * 1024;
+const MAX_ARCHIVE_TOTAL_SIZE = 60 * 1024 * 1024;
 const MAX_COMPRESSION_RATIO = 250;
-const MAX_XML_SIZE = 20 * 1024 * 1024;
+const MAX_XML_SIZE = 40 * 1024 * 1024;
 const MAX_VERTICES = 200_000;
 const MAX_TRIANGLES = 400_000;
 const MAX_OBJECTS = 10_000;
@@ -22,6 +22,7 @@ const MAX_TRAVERSAL_STEPS = 200_000;
 const MAX_PLATES = 100;
 const MAX_PLATE_INSTANCES = 10_000;
 const MAX_PLATE_METADATA = 100;
+const MAX_ASCII_STL_TRIANGLES = 5_000_000;
 const STANDARD_BUILD_VOLUME_MM = [256, 256, 256];
 const MODEL_RELATIONSHIP = "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel";
 const UNIT_FACTORS = {
@@ -325,10 +326,19 @@ function applyTransform(point, transform) {
   ];
 }
 
+function signedTetraVolume(a, b, c) {
+  return (
+    a[0] * (b[1] * c[2] - b[2] * c[1]) -
+    a[1] * (b[0] * c[2] - b[2] * c[0]) +
+    a[2] * (b[0] * c[1] - b[1] * c[0])
+  ) / 6;
+}
+
 function calculateBounds(model, buildIndexes) {
   const minimum = [Infinity, Infinity, Infinity];
   const maximum = [-Infinity, -Infinity, -Infinity];
   const factor = UNIT_FACTORS[model.unit];
+  let signedVolume = 0;
   let traversedVertices = 0;
   let traversalSteps = 0;
   function visit(objectId, transforms, stack) {
@@ -348,6 +358,12 @@ function calculateBounds(model, buildIndexes) {
         maximum[axis] = Math.max(maximum[axis], point[axis]);
       }
     }
+    for (const [v1, v2, v3] of object.triangles) {
+      const a = transforms.reduce((result, transform) => applyTransform(result, transform), object.vertices[v1]);
+      const b = transforms.reduce((result, transform) => applyTransform(result, transform), object.vertices[v2]);
+      const c = transforms.reduce((result, transform) => applyTransform(result, transform), object.vertices[v3]);
+      signedVolume += signedTetraVolume(a, b, c);
+    }
     for (const component of object.components) visit(component.objectId, [component.transform, ...transforms], [...stack, objectId]);
   }
   for (const index of buildIndexes) {
@@ -355,7 +371,7 @@ function calculateBounds(model, buildIndexes) {
     visit(item.objectId, [item.transform], []);
   }
   if (!minimum.every(Number.isFinite) || !maximum.every(Number.isFinite)) throw new ModelFileError("INVALID_3MF_GEOMETRY", "Non e possibile calcolare le dimensioni del 3MF.");
-  return { min: minimum, max: maximum, size: maximum.map((value, index) => value - minimum[index]) };
+  return { min: minimum, max: maximum, size: maximum.map((value, index) => value - minimum[index]), volumeMm3: Math.abs(signedVolume) * factor ** 3 };
 }
 
 function roundedBounds(bounds) {
@@ -412,7 +428,7 @@ function determineCompatibility(bounds) {
 
 export async function inspect3mfFile(filename) {
   const fileStats = await stat(filename);
-  if (fileStats.size < 100 || fileStats.size > MAX_MODEL_FILE_SIZE) throw new ModelFileError("INVALID_3MF_ARCHIVE", "Il file 3MF e vuoto o supera 50 MB.");
+  if (fileStats.size < 100 || fileStats.size > MAX_MODEL_FILE_SIZE) throw new ModelFileError("INVALID_3MF_ARCHIVE", "Il file 3MF e vuoto o supera 100 MB.");
   const entries = await read3mfArchive(filename);
   const rootRelationships = entries.get("_rels/.rels")?.content;
   if (!rootRelationships) throw new ModelFileError("INVALID_3MF_RELATIONSHIP", "Il 3MF non contiene le relazioni principali.");
@@ -505,10 +521,94 @@ export async function inspect3mfFile(filename) {
     previewPlate: firstPlate?.id ?? 1,
     previewBuildItemIndexes,
     boundsMm,
+    volumeMm3: Math.round(rawBounds.volumeMm3 * 1000) / 1000,
     referencePlate: { name: "Piatto standard", volumeMm: STANDARD_BUILD_VOLUME_MM },
     compatibility: determineCompatibility(rawBounds),
     metadata: model.metadata,
   };
+}
+
+function measureTriangleBatch(state, a, b, c) {
+  state.signedVolume += signedTetraVolume(a, b, c);
+  for (const vertex of [a, b, c]) {
+    for (let axis = 0; axis < 3; axis += 1) {
+      state.minimum[axis] = Math.min(state.minimum[axis], vertex[axis]);
+      state.maximum[axis] = Math.max(state.maximum[axis], vertex[axis]);
+    }
+  }
+  state.triangleCount += 1;
+}
+
+function createMeasureState() {
+  return {
+    signedVolume: 0,
+    minimum: [Infinity, Infinity, Infinity],
+    maximum: [-Infinity, -Infinity, -Infinity],
+    triangleCount: 0,
+  };
+}
+
+function finalizeMeasurements(state, sourceLabel) {
+  if (state.triangleCount === 0) throw new ModelFileError("INVALID_STL_CONTENT", `Il file ${sourceLabel} non contiene triangoli.`);
+  const size = state.maximum.map((value, index) => value - state.minimum[index]);
+  const rounded = (values) => values.map((value) => Math.round(value * 1000) / 1000);
+  return {
+    volumeMm3: Math.round(Math.abs(state.signedVolume) * 1000) / 1000,
+    boundsMm: { min: rounded(state.minimum), max: rounded(state.maximum), size: rounded(size) },
+    triangleCount: state.triangleCount,
+  };
+}
+
+export async function measureStlFile(filename) {
+  const fileStats = await stat(filename);
+  if (fileStats.size < 15 || fileStats.size > MAX_MODEL_FILE_SIZE) {
+    throw new ModelFileError("INVALID_STL_CONTENT", "Il file non contiene una struttura STL valida.");
+  }
+  const buffer = await readFile(filename);
+  const state = createMeasureState();
+  if (buffer.length >= 84) {
+    const triangleCount = buffer.readUInt32LE(80);
+    if (triangleCount > 0 && 84 + triangleCount * 50 === buffer.length) {
+      for (let index = 0; index < triangleCount; index += 1) {
+        const offset = 84 + index * 50 + 12;
+        const vertex = (corner) => [
+          buffer.readFloatLE(offset + corner * 12),
+          buffer.readFloatLE(offset + corner * 12 + 4),
+          buffer.readFloatLE(offset + corner * 12 + 8),
+        ];
+        measureTriangleBatch(state, vertex(0), vertex(1), vertex(2));
+      }
+      return finalizeMeasurements(state, "STL");
+    }
+  }
+  const text = buffer.toString("utf8");
+  if (!text.trimStart().toLowerCase().startsWith("solid")) throw new ModelFileError("INVALID_STL_CONTENT", "Il file non contiene una struttura STL valida.");
+  const vertexPattern = /vertex\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)/gi;
+  const pending = [];
+  for (const match of text.matchAll(vertexPattern)) {
+    pending.push([Number(match[1]), Number(match[2]), Number(match[3])]);
+    if (pending.length === 3) {
+      measureTriangleBatch(state, pending[0], pending[1], pending[2]);
+      pending.length = 0;
+      if (state.triangleCount > MAX_ASCII_STL_TRIANGLES) {
+        throw new ModelFileError("STL_TOO_MANY_TRIANGLES", "Il file STL contiene troppi triangoli.");
+      }
+    }
+  }
+  return finalizeMeasurements(state, "STL");
+}
+
+export async function measureModelFile(filename, format) {
+  if (format === "stl") return measureStlFile(filename);
+  if (format === "3mf") {
+    const inspection = await inspect3mfFile(filename);
+    return {
+      volumeMm3: inspection.volumeMm3,
+      boundsMm: inspection.boundsMm,
+      triangleCount: null,
+    };
+  }
+  throw new ModelFileError("UNSUPPORTED_MODEL_FORMAT", "Formato modello non supportato.");
 }
 
 export async function inspectModelFile(filename, format) {

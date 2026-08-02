@@ -62,10 +62,19 @@
 
       <section class="catalog" id="catalogo" aria-labelledby="titolo-catalogo">
         <div class="catalog-layout">
+          <aside class="request-tracker" id="stato-ordini" aria-labelledby="tracking-title">
+            <p class="section-number">01 / Coda</p>
+            <h2 id="tracking-title">Stato ordini</h2>
+            <p class="request-tracker__intro">Codici pubblici e avanzamento, senza dati personali.</p>
+            <p class="request-tracker__status" id="tracking-status" role="status">Caricamento ordini...</p>
+            <p class="visually-hidden" id="tracking-announcement" aria-live="polite"></p>
+            <ol class="request-list" id="request-list"></ol>
+          </aside>
+
           <div class="catalog-content">
             <header class="section-heading">
               <div>
-                <p class="section-number">01 / Catalogo</p>
+                <p class="section-number">02 / Catalogo</p>
                 <h2 id="titolo-catalogo">Scegli la prossima stampa</h2>
               </div>
               <p>Due modelli di esempio. Il catalogo definitivo verra gestito dal pannello amministrativo.</p>
@@ -114,15 +123,6 @@
               </article>
             </template>
           </div>
-
-          <aside class="request-tracker" id="stato-ordini" aria-labelledby="tracking-title">
-            <p class="section-number">02 / Coda</p>
-            <h2 id="tracking-title">Stato ordini</h2>
-            <p class="request-tracker__intro">Codici pubblici e avanzamento, senza dati personali.</p>
-            <p class="request-tracker__status" id="tracking-status" role="status">Caricamento ordini...</p>
-            <p class="visually-hidden" id="tracking-announcement" aria-live="polite"></p>
-            <ol class="request-list" id="request-list"></ol>
-          </aside>
         </div>
 
         <template id="request-template">
@@ -143,7 +143,7 @@
           <div>
             <p class="section-number">03 / Fuori catalogo</p>
             <h2 id="titolo-modello-personale">Hai gia un modello?</h2>
-            <p>Carica un file STL o 3MF fino a 50 MB oppure indica un link da uno dei siti supportati.</p>
+            <p>Carica un file STL o 3MF fino a 100 MB oppure indica un link da uno dei siti supportati.</p>
           </div>
         </div>
 
@@ -160,8 +160,19 @@
               <span class="file-field__value" id="custom-file-name">Nessun file selezionato</span>
               <input id="custom-file" name="model" type="file" accept=".stl,.3mf,model/stl,model/3mf">
             </label>
-            <p class="field-hint">File `.stl` o `.3mf`, massimo 50 MB. I `.gcode.3mf` sono esclusi. Il file temporaneo scade dopo 24 ore.</p>
+            <p class="field-hint">File `.stl` o `.3mf`, massimo 100 MB. I `.gcode.3mf` sono esclusi. Il file temporaneo scade dopo 24 ore.</p>
             <button class="preview-file" id="custom-preview" type="button" disabled>Visualizza modello</button>
+            <button class="quote-file" id="custom-quote" type="button" disabled>Calcola stima costo</button>
+            <div class="quote-panel" id="custom-quote-panel" hidden>
+              <p class="quote-panel__kicker">Stima indicativa</p>
+              <dl class="quote-panel__rows">
+                <div><dt>Materiale</dt><dd id="quote-grams">-</dd></div>
+                <div><dt>Tempo di stampa</dt><dd id="quote-hours">-</dd></div>
+                <div><dt>Prezzo al pezzo</dt><dd id="quote-unit">-</dd></div>
+                <div class="quote-panel__total"><dt>Totale stimato</dt><dd id="quote-total">-</dd></div>
+              </dl>
+              <p class="quote-panel__note">Calcolata su volume, bobina, energia e usura macchina. Il prezzo finale viene confermato dopo il controllo del file.</p>
+            </div>
           </div>
 
           <div class="custom-source-panel" id="custom-link-panel" hidden>

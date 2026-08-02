@@ -302,6 +302,27 @@
   border: 3px solid var(--ink);
 }
 
+.settings-pricing {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--panel);
+  border: 3px solid var(--ink);
+}
+
+.settings-pricing__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0 0.75rem;
+}
+
+.settings-pricing__grid .settings-field {
+  margin-bottom: 0.6rem;
+}
+
+.settings-pricing__grid .settings-field input {
+  min-height: 2.5rem;
+}
+
 .settings-field {
   display: grid;
   gap: 0.4rem;
@@ -700,6 +721,50 @@
   font-weight: 700;
   text-underline-offset: 0.3rem;
   text-transform: uppercase;
+}
+
+.admin-item__resource button {
+  padding: 0.35rem 0.6rem;
+  color: var(--paper);
+  background: var(--blue);
+  border: 0;
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-item__resource button:not(:disabled):hover,
+.admin-item__resource button:not(:disabled):focus-visible {
+  color: var(--ink);
+  background: var(--orange);
+  outline: none;
+}
+
+.admin-item__resource button:disabled {
+  opacity: 0.7;
+}
+
+.admin-item__quote {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 2px dashed var(--ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+#slicer-status[data-configured="true"] {
+  color: var(--green);
+  font-weight: 700;
+}
+
+#slicer-status[data-configured="false"] {
+  color: #b63627;
+  font-weight: 700;
 }
 
 .order-actions {

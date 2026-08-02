@@ -94,8 +94,13 @@ The Compose file loads environment variables from `.env` via `env_file`.
 | `SMTP_PASSWORD` | empty | SMTP password, required if user is set |
 | `SMTP_FROM` | empty | Notification sender |
 | `SMTP_TO` | empty | Order notification recipient |
+| `PRUSASLICER_PATH` | `/usr/local/bin/prusa-slicer-headless` (Docker image) | Slicer executable for precise admin quotes; empty disables the feature |
+| `PRUSASLICER_PROFILE` | empty | Optional PrusaSlicer config bundle (`.ini`) loaded with `--load` |
+| `PRUSASLICER_TIMEOUT_MS` | `120000` | Maximum slicing time per model |
 
 Email sending is disabled by default. After configuring SMTP, open the Control Room, click the settings gear, and enable "Email on new orders". An SMTP error is logged but does not cancel an already saved order.
+
+The Docker image ships PrusaSlicer (Debian package) wrapped in a virtual X server, so the Control Room "Stima precisa" button works out of the box: it slices the order's model file headlessly and prices the exact filament grams and print time reported in the G-code. Outside Docker, install PrusaSlicer and point `PRUSASLICER_PATH` at `prusa-slicer-console` (Windows) or `prusa-slicer` (Linux/macOS).
 
 ## Persistence and backup
 

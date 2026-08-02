@@ -142,8 +142,8 @@
                 <label><span>Ordine</span><input name="sortOrder" type="number" min="0" step="1" required></label>
                 <label class="product-fields__wide"><span>Testo alternativo immagine</span><input name="imageAlt" maxlength="180" required></label>
                 <label><span>Immagine PNG, JPG o WebP</span><input name="image" type="file" accept="image/png,image/jpeg,image/webp"></label>
-                <label><span>Modello STL facoltativo</span><input name="model" type="file" accept=".stl,model/stl"></label>
-                <label class="remove-model"><input name="removeModel" type="checkbox"> Rimuovi il modello STL attuale</label>
+                <label><span>Modello STL o 3MF facoltativo</span><input name="model" type="file" accept=".stl,.3mf,model/stl,model/3mf"></label>
+                <label class="remove-model"><input name="removeModel" type="checkbox"> Rimuovi il modello attuale</label>
               </div>
               <div class="asset-summary" id="asset-summary"></div>
               <p class="admin-feedback" id="product-feedback" role="status"></p>
@@ -185,6 +185,54 @@
               <span>Invia automaticamente un'email quando viene creato un ordine</span>
             </label>
             <p class="settings-hint">Server e credenziali SMTP si configurano nelle variabili d'ambiente del server o di Docker Compose.</p>
+          </section>
+          <section class="settings-pricing" aria-labelledby="settings-pricing-title">
+            <p class="section-number">Preventivi</p>
+            <h3 id="settings-pricing-title">Costi di stampa</h3>
+            <div class="settings-pricing__grid">
+              <label class="settings-field">
+                <span>Bobina (&euro;/kg)</span>
+                <input id="pricing-filament-price" type="number" min="0" max="10000" step="0.5" required>
+              </label>
+              <label class="settings-field">
+                <span>Densita (g/cm&sup3;)</span>
+                <input id="pricing-density" type="number" min="0.5" max="3" step="0.01" required>
+              </label>
+              <label class="settings-field">
+                <span>Riempimento effettivo (%)</span>
+                <input id="pricing-fill" type="number" min="1" max="100" step="1" required>
+              </label>
+              <label class="settings-field">
+                <span>Potenza stampante (W)</span>
+                <input id="pricing-power" type="number" min="10" max="2000" step="10" required>
+              </label>
+              <label class="settings-field">
+                <span>Energia (&euro;/kWh)</span>
+                <input id="pricing-energy" type="number" min="0" max="1000" step="0.01" required>
+              </label>
+              <label class="settings-field">
+                <span>Usura macchina (&euro;/h)</span>
+                <input id="pricing-machine-hour" type="number" min="0" max="10000" step="0.05" required>
+              </label>
+              <label class="settings-field">
+                <span>Estrusione media (mm&sup3;/s)</span>
+                <input id="pricing-extrusion" type="number" min="0.5" max="50" step="0.5" required>
+              </label>
+              <label class="settings-field">
+                <span>Preparazione (min)</span>
+                <input id="pricing-overhead" type="number" min="0" max="240" step="5" required>
+              </label>
+              <label class="settings-field">
+                <span>Margine (%)</span>
+                <input id="pricing-markup" type="number" min="0" max="500" step="1" required>
+              </label>
+              <label class="settings-field">
+                <span>Prezzo minimo (&euro;)</span>
+                <input id="pricing-min-quote" type="number" min="0" max="10000" step="0.5" required>
+              </label>
+            </div>
+            <p class="settings-hint">La stima pubblica misura il volume del modello e applica questi costi: materiale, energia, usura e margine. Il riempimento effettivo include infill e pareti.</p>
+            <p class="settings-hint" id="slicer-status"></p>
           </section>
           <p class="admin-feedback" id="settings-feedback" role="status"></p>
           <button class="save-order settings-save" type="submit">Salva impostazioni</button>
@@ -237,7 +285,9 @@
         <div class="admin-item__resource">
           <a data-field="model-link" hidden>Scarica modello</a>
           <a data-field="external-link" target="_blank" rel="noopener noreferrer" hidden>Apri link esterno</a>
+          <button data-field="precise-quote" type="button" hidden>Stima precisa</button>
         </div>
+        <p class="admin-item__quote" data-field="quote-result" hidden></p>
       </article>
     </template>
 

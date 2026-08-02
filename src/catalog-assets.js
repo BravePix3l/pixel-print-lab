@@ -6,14 +6,14 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import multer from "multer";
 import sharp from "sharp";
-import { isValidStlFile, MAX_STL_FILE_SIZE } from "./custom-model-routes.js";
+import { detectModelFormat, inspectModelFile, MAX_MODEL_FILE_SIZE } from "./model-files.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_LIMIT = 5 * 1024 * 1024;
 const ASSET_PREFIX = "/catalog-assets/";
 const extensions = {
   image: new Set([".jpg", ".jpeg", ".png", ".webp"]),
-  model: new Set([".stl"]),
+  model: new Set([".stl", ".3mf"]),
 };
 
 export const defaultCatalogDirectory = path.join(currentDirectory, "..", "storage", "catalog");
@@ -52,7 +52,7 @@ export function createCatalogUpload(catalogDirectory = defaultCatalogDirectory) 
   });
   return multer({
     storage,
-    limits: { fileSize: MAX_STL_FILE_SIZE, files: 2, fields: 20, parts: 23 },
+    limits: { fileSize: MAX_MODEL_FILE_SIZE, files: 2, fields: 20, parts: 23 },
   }).fields([{ name: "image", maxCount: 1 }, { name: "model", maxCount: 1 }]);
 }
 
@@ -80,8 +80,18 @@ export async function validateCatalogFiles(files = {}) {
       throw new CatalogAssetError("INVALID_CATALOG_IMAGE", "L'immagine deve essere PNG, JPG o WebP valida e non superare 5 MB.");
     }
   }
-  if (model && (!extensions.model.has(path.extname(model.originalname).toLowerCase()) || !(await isValidStlFile(model.path)))) {
-    throw new CatalogAssetError("INVALID_CATALOG_MODEL", "Il modello deve essere un file STL valido e non superare 50 MB.");
+  if (model) {
+    let validModel = extensions.model.has(path.extname(model.originalname).toLowerCase());
+    if (validModel) {
+      try {
+        await inspectModelFile(model.path, detectModelFormat(model.originalname));
+      } catch {
+        validModel = false;
+      }
+    }
+    if (!validModel) {
+      throw new CatalogAssetError("INVALID_CATALOG_MODEL", "Il modello deve essere un file STL o 3MF valido e non superare 100 MB.");
+    }
   }
   return {
     imageUrl: image ? `${ASSET_PREFIX}${image.filename}` : null,
@@ -94,7 +104,7 @@ export function getUploadedPaths(files = {}) {
 }
 
 export function managedAssetPath(url, catalogDirectory = defaultCatalogDirectory) {
-  if (typeof url !== "string" || !/^\/catalog-assets\/[0-9a-f-]+\.(?:jpg|png|webp|stl)$/i.test(url)) return null;
+  if (typeof url !== "string" || !/^\/catalog-assets\/[0-9a-f-]+\.(?:jpg|png|webp|stl|3mf)$/i.test(url)) return null;
   return path.join(catalogDirectory, path.basename(url));
 }
 

@@ -1080,6 +1080,84 @@ h1 em {
   outline: none;
 }
 
+.quote-file {
+  min-height: 2.5rem;
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  color: var(--paper);
+  background: var(--ink);
+  border: 0;
+  box-shadow: 4px 4px 0 var(--orange);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quote-file:not(:disabled):hover,
+.quote-file:not(:disabled):focus-visible {
+  color: var(--ink);
+  background: var(--orange);
+  box-shadow: 4px 4px 0 var(--ink);
+  outline: none;
+}
+
+.quote-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--panel);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--orange);
+}
+
+.quote-panel__kicker {
+  margin: 0 0 0.5rem;
+  color: var(--orange);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.quote-panel__rows {
+  margin: 0;
+}
+
+.quote-panel__rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 2px dashed var(--muted);
+  font-size: 0.75rem;
+}
+
+.quote-panel__rows dt {
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quote-panel__rows dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.quote-panel__total {
+  border-bottom: 0;
+}
+
+.quote-panel__total dd {
+  color: var(--orange);
+  font-size: 0.95rem;
+}
+
+.quote-panel__note {
+  margin: 0.6rem 0 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
 .link-field input {
   width: 100%;
   min-height: 3rem;

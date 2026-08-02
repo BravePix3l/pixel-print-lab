@@ -69,12 +69,18 @@ const customFileInput = document.querySelector("#custom-file");
 const customFileName = document.querySelector("#custom-file-name");
 const customLinkInput = document.querySelector("#custom-link");
 const customPreviewButton = document.querySelector("#custom-preview");
+const customQuoteButton = document.querySelector("#custom-quote");
+const customQuotePanel = document.querySelector("#custom-quote-panel");
+const quoteGrams = document.querySelector("#quote-grams");
+const quoteHours = document.querySelector("#quote-hours");
+const quoteUnit = document.querySelector("#quote-unit");
+const quoteTotal = document.querySelector("#quote-total");
 const customColorOptions = document.querySelector("#custom-color-options");
 const customQuantityInput = document.querySelector("#custom-quantity");
 const customSubmitButton = document.querySelector("#custom-submit");
 const customFeedback = document.querySelector("#custom-feedback");
 const catalogScrollIndicator = document.querySelector("#catalog-scroll-indicator");
-const MAX_MODEL_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_MODEL_FILE_SIZE = 100 * 1024 * 1024;
 const euroFormatter = new Intl.NumberFormat("it-IT", {
   style: "currency",
   currency: "EUR",
@@ -92,6 +98,7 @@ let cart = readCart();
 let viewerModulePromise;
 let inspectedUpload;
 let uploadGeneration = 0;
+let currentQuote;
 let publicOrdersSignature = "";
 let trackingLoadVersion = 0;
 let currentAccount;
@@ -246,8 +253,13 @@ function createCartItem(item) {
       item.sourceType === "file" ? `${(item.modelFormat ?? "stl").toUpperCase()} personale` : `Link / ${item.sourceName}`,
     );
     setText(element, "cart-name", item.name);
-    setText(element, "cart-unit-price", "Prezzo da definire");
-    setText(element, "cart-line-total", "Preventivo");
+    if (item.quoteUnitPriceCents) {
+      setText(element, "cart-unit-price", `Stima ${euroFormatter.format(item.quoteUnitPriceCents / 100)} / cad.`);
+      setText(element, "cart-line-total", `Stima ${euroFormatter.format((item.quoteUnitPriceCents * item.quantity) / 100)}`);
+    } else {
+      setText(element, "cart-unit-price", "Prezzo da definire");
+      setText(element, "cart-line-total", "Preventivo");
+    }
     if (item.sourceType === "file") {
       viewButton.hidden = false;
       viewButton.addEventListener("click", async () => {
@@ -316,10 +328,29 @@ function getCustomSource() {
   return customForm.elements.namedItem("custom-source").value;
 }
 
+function discardQuote() {
+  currentQuote = undefined;
+  customQuotePanel.hidden = true;
+}
+
 function discardInspectedUpload() {
   uploadGeneration += 1;
   if (inspectedUpload) fetch(`/api/custom-models/${inspectedUpload.id}`, { method: "DELETE" }).catch(console.error);
   inspectedUpload = undefined;
+  discardQuote();
+}
+
+function renderQuote() {
+  if (!currentQuote) {
+    customQuotePanel.hidden = true;
+    return;
+  }
+  const quantity = Number(customQuantityInput.value) || 1;
+  quoteGrams.textContent = `${currentQuote.grams} g / pezzo`;
+  quoteHours.textContent = `~${currentQuote.hours} h / pezzo`;
+  quoteUnit.textContent = `${euroFormatter.format(currentQuote.unitPriceCents / 100)} / cad.`;
+  quoteTotal.textContent = euroFormatter.format((currentQuote.unitPriceCents * quantity) / 100);
+  customQuotePanel.hidden = false;
 }
 
 function updateCustomFormReadiness() {
@@ -359,7 +390,7 @@ function validateSelectedFile() {
     throw new Error("Il file modello e vuoto.");
   }
   if (file.size > MAX_MODEL_FILE_SIZE) {
-    throw new Error("Il file modello non puo superare 50 MB.");
+    throw new Error("Il file modello non puo superare 100 MB.");
   }
   return file;
 }
@@ -626,6 +657,7 @@ customFileInput.addEventListener("change", () => {
   const file = customFileInput.files[0];
   customFileName.textContent = file?.name ?? "Nessun file selezionato";
   customPreviewButton.disabled = !file;
+  customQuoteButton.disabled = !file;
   customFeedback.textContent = "";
   updateCustomFormReadiness();
 });
@@ -667,6 +699,29 @@ customPreviewButton.addEventListener("click", async () => {
   }
 });
 
+customQuoteButton.addEventListener("click", async () => {
+  try {
+    const file = validateSelectedFile();
+    customQuoteButton.disabled = true;
+    customQuoteButton.textContent = "Calcolo...";
+    customFeedback.textContent = "";
+    customFeedback.classList.remove("custom-feedback--error");
+    const upload = await inspectedModelFor(file);
+    const quote = await parseApiResponse(await fetch(`/api/custom-models/${upload.id}/quote`));
+    currentQuote = { uploadId: upload.id, ...quote };
+    renderQuote();
+  } catch (error) {
+    discardQuote();
+    customFeedback.textContent = error.message;
+    customFeedback.classList.add("custom-feedback--error");
+  } finally {
+    customQuoteButton.disabled = !customFileInput.files[0];
+    customQuoteButton.textContent = "Calcola stima costo";
+  }
+});
+
+customQuantityInput.addEventListener("input", () => renderQuote());
+
 customForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const sourceType = getCustomSource();
@@ -696,8 +751,16 @@ customForm.addEventListener("submit", async (event) => {
     }
 
     const { sourceFileName: _sourceFileName, sourceFileSize: _sourceFileSize, sourceFileModified: _sourceFileModified, ...modelData } = customModel;
+    const quoteData = currentQuote?.uploadId === customModel.id
+      ? {
+          quoteUnitPriceCents: currentQuote.unitPriceCents,
+          quoteGrams: currentQuote.grams,
+          quoteHours: currentQuote.hours,
+        }
+      : {};
     cart = addCustomCartItem(cart, {
       ...modelData,
+      ...quoteData,
       sourceType,
       colorId,
       quantity,
@@ -707,9 +770,13 @@ customForm.addEventListener("submit", async (event) => {
     customForm.reset();
     customFileName.textContent = "Nessun file selezionato";
     customPreviewButton.disabled = true;
+    customQuoteButton.disabled = true;
     updateCustomSource();
-    customFeedback.textContent = "Richiesta aggiunta al carrello. Prezzo da definire.";
+    customFeedback.textContent = quoteData.quoteUnitPriceCents
+      ? `Richiesta aggiunta al carrello. Stima ${euroFormatter.format(quoteData.quoteUnitPriceCents / 100)} al pezzo.`
+      : "Richiesta aggiunta al carrello. Prezzo da definire.";
     inspectedUpload = undefined;
+    discardQuote();
     uploadedId = undefined;
   } catch (error) {
     if (uploadedId) {

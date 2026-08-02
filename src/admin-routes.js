@@ -14,6 +14,8 @@ import {
   defaultOrderFileDirectory,
   ORDER_STATUSES,
 } from "./order-routes.js";
+import { finalizeQuote, readPricingSettings, updatePricingSettings } from "./pricing.js";
+import { SlicerError } from "./slicer-quote.js";
 
 class AdminError extends Error {
   constructor(code, message, status = 400) {
@@ -24,7 +26,7 @@ class AdminError extends Error {
 }
 
 function sendError(response, error) {
-  if (error instanceof AdminError || error instanceof CatalogAssetError || error instanceof AuthError) {
+  if (error instanceof AdminError || error instanceof CatalogAssetError || error instanceof AuthError || error instanceof SlicerError) {
     return response.status(error.status).json({ error: { code: error.code, message: error.message } });
   }
   if (error?.name === "MulterError") {
@@ -142,6 +144,34 @@ function parseModelMetadata(value) {
   }
 }
 
+const PRICING_RULES = [
+  ["filamentPriceCentsPerKg", "Il costo della bobina", { integer: true, min: 0, max: 1_000_000 }],
+  ["filamentDensityGCm3", "La densita del filamento", { min: 0.5, max: 3 }],
+  ["effectiveFillPercent", "Il riempimento effettivo", { min: 1, max: 100 }],
+  ["printerPowerWatts", "La potenza della stampante", { integer: true, min: 10, max: 2000 }],
+  ["energyPriceCentsPerKwh", "Il costo dell'energia", { integer: true, min: 0, max: 100_000 }],
+  ["machineHourlyCostCents", "Il costo orario della macchina", { integer: true, min: 0, max: 1_000_000 }],
+  ["extrusionRateMm3PerSecond", "La velocita di estrusione", { min: 0.5, max: 50 }],
+  ["overheadMinutes", "Il tempo fisso di preparazione", { integer: true, min: 0, max: 240 }],
+  ["markupPercent", "Il margine", { min: 0, max: 500 }],
+  ["minQuoteCents", "Il prezzo minimo", { integer: true, min: 0, max: 1_000_000 }],
+];
+
+function validatePricing(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new AdminError("INVALID_SETTINGS", "I parametri di costo non sono validi.");
+  }
+  const pricing = {};
+  for (const [field, label, { integer = false, min, max }] of PRICING_RULES) {
+    const parsed = Number(value[field]);
+    if (!Number.isFinite(parsed) || parsed < min || parsed > max || (integer && !Number.isInteger(parsed))) {
+      throw new AdminError("INVALID_SETTINGS", `${label} non e valido.`);
+    }
+    pricing[field] = parsed;
+  }
+  return pricing;
+}
+
 function serializeItem(item) {
   const modelMetadata = parseModelMetadata(item.model_metadata_json);
   return {
@@ -162,6 +192,7 @@ function serializeItem(item) {
     hasModel: Boolean(item.model_filename),
     modelFormat: item.model_format ?? (item.model_filename?.toLowerCase().endsWith(".3mf") ? "3mf" : item.model_filename ? "stl" : null),
     modelMetadata,
+    preciseQuote: parseModelMetadata(item.quote_json),
   };
 }
 
@@ -173,6 +204,7 @@ export function registerAdminRoutes(
     catalogDirectory,
     orderFileDirectory = defaultOrderFileDirectory,
     emailService,
+    slicerService,
     authService,
   },
 ) {
@@ -220,6 +252,9 @@ export function registerAdminRoutes(
   const updateOrderStatus = database.prepare(`
     UPDATE orders SET status = ? WHERE id = ?
   `);
+  const updateItemQuote = database.prepare(`
+    UPDATE order_items SET quote_json = ? WHERE id = ? AND order_id = ?
+  `);
   const getSettings = database.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1");
   const updateEmailNotifications = database.prepare(`
     UPDATE app_settings
@@ -235,6 +270,8 @@ export function registerAdminRoutes(
       smtpRecipient: emailService?.recipient ?? null,
       adminUsername: adminAccess.username,
       adminCredentialsCustomized: adminAccess.customized,
+      pricing: readPricingSettings(database),
+      slicerConfigured: Boolean(slicerService?.configured),
     };
   }
 
@@ -296,6 +333,9 @@ export function registerAdminRoutes(
         throw new AdminError("SMTP_NOT_CONFIGURED", "Configura SMTP prima di attivare le email.", 409);
       }
       updateEmailNotifications.run(request.body.emailNotificationsEnabled ? 1 : 0);
+      if (request.body.pricing !== undefined) {
+        updatePricingSettings(database, validatePricing(request.body.pricing));
+      }
       return response.json({ data: serializeSettings() });
     } catch (error) {
       return sendError(response, error);
@@ -508,6 +548,39 @@ export function registerAdminRoutes(
     response.setHeader("Content-Type", modelContentType(item.model_format ?? (item.model_filename.toLowerCase().endsWith(".3mf") ? "3mf" : "stl")));
     response.setHeader("X-Content-Type-Options", "nosniff");
     return response.download(path.join(orderFileDirectory, item.model_filename), item.original_name ?? item.model_filename);
+  });
+
+  app.post("/api/admin/orders/:orderId/items/:itemId/precise-quote", requireAdmin, async (request, response) => {
+    try {
+      const orderId = Number.parseInt(request.params.orderId, 10);
+      const itemId = Number.parseInt(request.params.itemId, 10);
+      const item = findItem.get(itemId, orderId);
+      if (!item?.model_filename) {
+        throw new AdminError("MODEL_NOT_FOUND", "File modello non trovato.", 404);
+      }
+      if (!slicerService?.configured) {
+        throw new SlicerError(
+          "SLICER_NOT_CONFIGURED",
+          "PrusaSlicer non e configurato: imposta la variabile PRUSASLICER_PATH.",
+          503,
+        );
+      }
+      const stats = await slicerService.slice(path.join(orderFileDirectory, item.model_filename));
+      const quote = finalizeQuote(
+        { grams: stats.grams, hours: stats.seconds / 3600 },
+        readPricingSettings(database),
+      );
+      const preciseQuote = {
+        ...quote,
+        seconds: Math.round(stats.seconds),
+        source: "prusaslicer",
+        createdAt: new Date().toISOString(),
+      };
+      updateItemQuote.run(JSON.stringify(preciseQuote), item.id, item.order_id);
+      return response.json({ data: preciseQuote });
+    } catch (error) {
+      return sendError(response, error);
+    }
   });
 
   app.delete("/api/admin/orders/:id", requireAdmin, async (request, response) => {
