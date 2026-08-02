@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.1] - 2026-08-02
+
+### Fixed
+
+- Updated admin asset cache-busting so the Control Room loads the JavaScript and CSS containing real slicer data fields.
+
+### Changed
+
+- Removed the temporary catalog copy that described the products as examples.
+
 ## [1.1.0] - 2026-08-02
 
 ### Added
