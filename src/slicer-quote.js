@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -54,19 +54,20 @@ export function createSlicerService({
       );
     }
     const workDirectory = await mkdtemp(path.join(tmpdir(), "pixel-print-lab-slice-"));
+    const outputFile = path.join(workDirectory, "output.gcode");
     try {
-      const args = ["--export-gcode", "--output", workDirectory];
+      const args = ["--no-gui", "--export-gcode", "--output", outputFile];
       if (profilePath) args.push("--load", profilePath);
       args.push(modelPath);
 
       await new Promise((resolve, reject) => {
         const child = spawnImpl(executablePath, args, { windowsHide: true });
-        let output = "";
-        const collect = (chunk) => {
-          if (output.length < MAX_PROCESS_OUTPUT) output += chunk.toString();
+        let stderr = "";
+        const collectStderr = (chunk) => {
+          if (stderr.length < MAX_PROCESS_OUTPUT) stderr += chunk.toString();
         };
-        child.stdout?.on("data", collect);
-        child.stderr?.on("data", collect);
+        child.stdout?.on("data", () => {});
+        child.stderr?.on("data", collectStderr);
         const timer = setTimeout(() => {
           child.kill("SIGKILL");
           reject(new SlicerError("SLICER_TIMEOUT", "Lo slicing ha superato il tempo massimo consentito.", 504));
@@ -81,23 +82,19 @@ export function createSlicerService({
         });
         child.once("close", (code) => {
           clearTimeout(timer);
-          if (code === 0) resolve();
-          else {
-            reject(new SlicerError(
-              "SLICER_FAILED",
-              `PrusaSlicer non e riuscito a processare il modello (codice ${code}).`,
-              422,
-            ));
-          }
+          if (code === 0) return resolve();
+          const trimmed = stderr.trim();
+          const detail = trimmed ? `: ${trimmed.slice(-500)}` : "";
+          console.error(`PrusaSlicer error (exit ${code}):${detail}`);
+          reject(new SlicerError(
+            "SLICER_FAILED",
+            `PrusaSlicer non e riuscito a processare il modello (codice ${code}).`,
+            422,
+          ));
         });
       });
 
-      const gcodeName = (await readdir(workDirectory)).find((name) => name.toLowerCase().endsWith(".gcode"));
-      if (!gcodeName) {
-        throw new SlicerError("SLICER_NO_OUTPUT", "PrusaSlicer non ha prodotto il file G-code.", 502);
-      }
-      const gcodePath = path.join(workDirectory, gcodeName);
-      const stats = await readFile(gcodePath);
+      const stats = await readFile(outputFile);
       const tail = stats.subarray(Math.max(0, stats.length - GCODE_TAIL_BYTES)).toString("utf8");
       const parsed = parseGcodeStats(tail);
       if (!parsed) {
