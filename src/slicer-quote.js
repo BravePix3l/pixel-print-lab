@@ -56,7 +56,7 @@ export function createSlicerService({
     const workDirectory = await mkdtemp(path.join(tmpdir(), "pixel-print-lab-slice-"));
     const outputFile = path.join(workDirectory, "output.gcode");
     try {
-      const args = ["--no-gui", "--export-gcode", "--output", outputFile];
+      const args = ["--export-gcode", "--output", outputFile];
       if (profilePath) args.push("--load", profilePath);
       args.push(modelPath);
 
