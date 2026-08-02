@@ -80,7 +80,7 @@ const customQuantityInput = document.querySelector("#custom-quantity");
 const customSubmitButton = document.querySelector("#custom-submit");
 const customFeedback = document.querySelector("#custom-feedback");
 const catalogScrollIndicator = document.querySelector("#catalog-scroll-indicator");
-const MAX_MODEL_FILE_SIZE = 100 * 1024 * 1024;
+const MAX_MODEL_FILE_SIZE = 500 * 1024 * 1024;
 const euroFormatter = new Intl.NumberFormat("it-IT", {
   style: "currency",
   currency: "EUR",
@@ -390,7 +390,7 @@ function validateSelectedFile() {
     throw new Error("Il file modello e vuoto.");
   }
   if (file.size > MAX_MODEL_FILE_SIZE) {
-    throw new Error("Il file modello non puo superare 100 MB.");
+    throw new Error("Il file modello non puo superare 500 MB.");
   }
   return file;
 }

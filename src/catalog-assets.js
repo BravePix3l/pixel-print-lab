@@ -90,7 +90,7 @@ export async function validateCatalogFiles(files = {}) {
       }
     }
     if (!validModel) {
-      throw new CatalogAssetError("INVALID_CATALOG_MODEL", "Il modello deve essere un file STL o 3MF valido e non superare 100 MB.");
+      throw new CatalogAssetError("INVALID_CATALOG_MODEL", "Il modello deve essere un file STL o 3MF valido e non superare 500 MB.");
     }
   }
   return {

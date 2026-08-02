@@ -590,10 +590,10 @@ test("rifiuta estensioni e contenuti STL non validi", async () => {
   assert.equal(contentResponse.status, 400);
   assert.equal((await contentResponse.json()).error.code, "INVALID_STL_CONTENT");
   assert.equal((await readdir(uploadDirectory)).length, 0);
-  assert.equal(MAX_STL_FILE_SIZE, 100 * 1024 * 1024);
+  assert.equal(MAX_STL_FILE_SIZE, 500 * 1024 * 1024);
 });
 
-test("rifiuta un file che supera 100 MB", async () => {
+test("rifiuta un file che supera 500 MB", async () => {
   const form = new FormData();
   form.append("model", new Blob([new Uint8Array(MAX_STL_FILE_SIZE + 1)]), "troppo-grande.stl");
 
@@ -934,7 +934,7 @@ test("aggiorna i parametri di costo dalle impostazioni e li applica alle stime",
   form.append("model", new Blob([createBinaryStlCubeBuffer(10)], { type: "model/stl" }), "cubo-prezzo.stl");
   const upload = (await (await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form })).json()).data;
   const quote = (await (await fetch(`${baseUrl}/api/custom-models/${upload.id}/quote`)).json()).data;
-  assert.equal(quote.unitPriceCents, 50);
+  assert.equal(quote.unitPriceCents, 23);
   assert.equal(quote.breakdown.materialCents, 9);
   await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
 

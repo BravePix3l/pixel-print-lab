@@ -3,14 +3,14 @@ import path from "node:path";
 import { SaxesParser } from "saxes";
 import yauzl from "yauzl";
 
-export const MAX_MODEL_FILE_SIZE = 100 * 1024 * 1024;
+export const MAX_MODEL_FILE_SIZE = 500 * 1024 * 1024;
 export const MODEL_FORMATS = new Set(["stl", "3mf"]);
 
 const MAX_ARCHIVE_ENTRIES = 256;
-const MAX_ARCHIVE_ENTRY_SIZE = 50 * 1024 * 1024;
-const MAX_ARCHIVE_TOTAL_SIZE = 60 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRY_SIZE = 500 * 1024 * 1024;
+const MAX_ARCHIVE_TOTAL_SIZE = 500 * 1024 * 1024;
 const MAX_COMPRESSION_RATIO = 250;
-const MAX_XML_SIZE = 40 * 1024 * 1024;
+const MAX_XML_SIZE = 500 * 1024 * 1024;
 const MAX_VERTICES = 200_000;
 const MAX_TRIANGLES = 400_000;
 const MAX_OBJECTS = 10_000;
@@ -428,7 +428,7 @@ function determineCompatibility(bounds) {
 
 async function load3mfModel(filename) {
   const fileStats = await stat(filename);
-  if (fileStats.size < 100 || fileStats.size > MAX_MODEL_FILE_SIZE) throw new ModelFileError("INVALID_3MF_ARCHIVE", "Il file 3MF e vuoto o supera 100 MB.");
+  if (fileStats.size < 100 || fileStats.size > MAX_MODEL_FILE_SIZE) throw new ModelFileError("INVALID_3MF_ARCHIVE", "Il file 3MF e vuoto o supera 500 MB.");
   const entries = await read3mfArchive(filename);
   const rootRelationships = entries.get("_rels/.rels")?.content;
   if (!rootRelationships) throw new ModelFileError("INVALID_3MF_RELATIONSHIP", "Il 3MF non contiene le relazioni principali.");

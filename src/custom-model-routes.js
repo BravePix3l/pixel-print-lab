@@ -45,7 +45,7 @@ function sendError(response, error) {
       error: {
         code: fileTooLarge ? "MODEL_TOO_LARGE" : "INVALID_UPLOAD",
         message: fileTooLarge
-          ? "Il file modello non puo superare 100 MB."
+          ? "Il file modello non puo superare 500 MB."
           : "La richiesta di caricamento non e valida.",
       },
     });

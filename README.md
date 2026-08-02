@@ -28,7 +28,7 @@ Friends can pick a model from the catalog or upload an STL/3MF file, choose colo
 
 - **Public catalog** with products, colors, and a 3D viewer for STL models.
 - **Guest or account requests**: users can order immediately or create an account to keep a personal history.
-- **Custom model upload**: STL or 3MF files up to 50 MB, or supported external links.
+- **Custom model upload**: STL or 3MF files up to 500 MB, or supported external links.
 - **Public tracking**: every request gets a unique code and a visible status (`pending`, `in progress`, `completed`, `delivered`).
 - **Control Room**: admin panel for managing orders, catalog, colors, and settings.
 - **Email notifications**: optional SMTP alert for every new order.

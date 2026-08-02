@@ -11,16 +11,13 @@ export const PRICING_DEFAULTS = {
   minQuoteCents: 500,
 };
 
-const QUOTE_ROUNDING_CENTS = 50;
-
 export function finalizeQuote({ grams, hours }, pricing = PRICING_DEFAULTS) {
   const materialCents = (grams / 1000) * pricing.filamentPriceCentsPerKg;
   const energyCents = hours * (pricing.printerPowerWatts / 1000) * pricing.energyPriceCentsPerKwh;
   const wearCents = hours * pricing.machineHourlyCostCents;
   const subtotalCents = materialCents + energyCents + wearCents;
   const withMarkupCents = subtotalCents * (1 + pricing.markupPercent / 100);
-  const unitPriceCents =
-    Math.ceil(Math.max(pricing.minQuoteCents, withMarkupCents) / QUOTE_ROUNDING_CENTS) * QUOTE_ROUNDING_CENTS;
+  const unitPriceCents = Math.max(pricing.minQuoteCents, Math.round(withMarkupCents));
   return {
     grams: Math.round(grams * 10) / 10,
     hours: Math.round(hours * 100) / 100,
