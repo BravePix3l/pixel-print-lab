@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { convert3mfFileToStl, detectModelFormat } from "./model-files.js";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const GCODE_TAIL_BYTES = 512 * 1024;
@@ -56,9 +57,16 @@ export function createSlicerService({
     const workDirectory = await mkdtemp(path.join(tmpdir(), "pixel-print-lab-slice-"));
     const outputFile = path.join(workDirectory, "output.gcode");
     try {
+      let inputPath = modelPath;
+      const format = detectModelFormat(modelPath);
+      if (format === "3mf") {
+        const convertedStl = path.join(workDirectory, "converted.stl");
+        await convert3mfFileToStl(modelPath, convertedStl);
+        inputPath = convertedStl;
+      }
       const args = ["--export-gcode", "--output", outputFile];
       if (profilePath) args.push("--load", profilePath);
-      args.push(modelPath);
+      args.push(inputPath);
 
       await new Promise((resolve, reject) => {
         const child = spawnImpl(executablePath, args, { windowsHide: true });

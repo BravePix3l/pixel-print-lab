@@ -1,4 +1,4 @@
-import { open, readFile, stat } from "node:fs/promises";
+import { open, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { SaxesParser } from "saxes";
 import yauzl from "yauzl";
@@ -426,7 +426,7 @@ function determineCompatibility(bounds) {
   };
 }
 
-export async function inspect3mfFile(filename) {
+async function load3mfModel(filename) {
   const fileStats = await stat(filename);
   if (fileStats.size < 100 || fileStats.size > MAX_MODEL_FILE_SIZE) throw new ModelFileError("INVALID_3MF_ARCHIVE", "Il file 3MF e vuoto o supera 100 MB.");
   const entries = await read3mfArchive(filename);
@@ -512,20 +512,95 @@ export async function inspect3mfFile(filename) {
       throw new ModelFileError("INVALID_BAMBU_PLATE", "Il primo piatto Bambu non riferisce tutte le istanze dichiarate.");
     }
   }
-  const rawBounds = calculateBounds(model, previewBuildItemIndexes);
-  const boundsMm = roundedBounds(rawBounds);
   return {
-    projectType: plateBuffer ? "bambu" : "generic",
     unit: model.unit,
+    objects: model.objects,
+    buildItems: model.buildItems,
+    previewBuildItemIndexes,
+    metadata: model.metadata,
+    isBambu: Boolean(plateBuffer),
     plateCount: plates.length || 1,
     previewPlate: firstPlate?.id ?? 1,
-    previewBuildItemIndexes,
+  };
+}
+
+export async function inspect3mfFile(filename) {
+  const model = await load3mfModel(filename);
+  const rawBounds = calculateBounds(model, model.previewBuildItemIndexes);
+  const boundsMm = roundedBounds(rawBounds);
+  return {
+    projectType: model.isBambu ? "bambu" : "generic",
+    unit: model.unit,
+    plateCount: model.plateCount,
+    previewPlate: model.previewPlate,
+    previewBuildItemIndexes: model.previewBuildItemIndexes,
     boundsMm,
     volumeMm3: Math.round(rawBounds.volumeMm3 * 1000) / 1000,
     referencePlate: { name: "Piatto standard", volumeMm: STANDARD_BUILD_VOLUME_MM },
     compatibility: determineCompatibility(rawBounds),
     metadata: model.metadata,
   };
+}
+
+function writeStlBinary(triangles, targetPath) {
+  const buffer = Buffer.alloc(80 + 4 + triangles.length * 50);
+  buffer.fill(0);
+  buffer.write("Pixel Print Lab 3MF conversion", 0, "utf8");
+  buffer.writeUInt32LE(triangles.length, 80);
+  let offset = 84;
+  for (const [a, b, c] of triangles) {
+    const ux = b[0] - a[0];
+    const uy = b[1] - a[1];
+    const uz = b[2] - a[2];
+    const vx = c[0] - a[0];
+    const vy = c[1] - a[1];
+    const vz = c[2] - a[2];
+    buffer.writeFloatLE(uy * vz - uz * vy, offset);
+    buffer.writeFloatLE(uz * vx - ux * vz, offset + 4);
+    buffer.writeFloatLE(ux * vy - uy * vx, offset + 8);
+    for (let i = 0; i < 3; i += 1) {
+      const p = i === 0 ? a : i === 1 ? b : c;
+      buffer.writeFloatLE(p[0], offset + 12 + i * 12);
+      buffer.writeFloatLE(p[1], offset + 12 + i * 12 + 4);
+      buffer.writeFloatLE(p[2], offset + 12 + i * 12 + 8);
+    }
+    offset += 50;
+  }
+  return writeFile(targetPath, buffer);
+}
+
+const MAX_SLICER_TRIANGLES = 2_000_000;
+
+export async function convert3mfFileToStl(sourcePath, targetPath) {
+  const model = await load3mfModel(sourcePath);
+  const factor = UNIT_FACTORS[model.unit];
+  const triangles = [];
+  let traversedVertices = 0;
+  let traversalSteps = 0;
+  function visit(objectId, transforms, stack) {
+    traversalSteps += 1;
+    if (traversalSteps > MAX_TRAVERSAL_STEPS) throw new ModelFileError("3MF_TRAVERSAL_TOO_COMPLEX", "La struttura del 3MF e troppo complessa per la conversione.");
+    if (stack.length > MAX_COMPONENT_DEPTH || stack.includes(objectId)) throw new ModelFileError("INVALID_3MF_COMPONENTS", "Il 3MF contiene componenti ricorsivi o troppo profondi.");
+    const object = model.objects.get(objectId);
+    if (!object) throw new ModelFileError("INVALID_3MF_GEOMETRY", "Il 3MF riferisce un oggetto inesistente.");
+    const referencedVertices = new Set(object.triangles.flat());
+    traversedVertices += referencedVertices.size;
+    if (traversedVertices > MAX_TRAVERSAL_VERTICES) throw new ModelFileError("3MF_TRAVERSAL_TOO_COMPLEX", "La struttura del 3MF e troppo complessa per la conversione.");
+    for (const [v1, v2, v3] of object.triangles) {
+      const a = transforms.reduce((result, transform) => applyTransform(result, transform), object.vertices[v1]).map((value) => value * factor);
+      const b = transforms.reduce((result, transform) => applyTransform(result, transform), object.vertices[v2]).map((value) => value * factor);
+      const c = transforms.reduce((result, transform) => applyTransform(result, transform), object.vertices[v3]).map((value) => value * factor);
+      triangles.push([a, b, c]);
+    }
+    if (triangles.length > MAX_SLICER_TRIANGLES) throw new ModelFileError("3MF_TOO_MANY_TRIANGLES", "Il 3MF contiene troppi triangoli per essere convertito per lo slicer.");
+    for (const component of object.components) visit(component.objectId, [component.transform, ...transforms], [...stack, objectId]);
+  }
+  for (const index of model.previewBuildItemIndexes) {
+    const item = model.buildItems[index];
+    visit(item.objectId, [item.transform], []);
+  }
+  if (triangles.length === 0) throw new ModelFileError("EMPTY_3MF_MESH", "Il 3MF non contiene geometria convertibile.");
+  await writeStlBinary(triangles, targetPath);
 }
 
 function measureTriangleBatch(state, a, b, c) {
