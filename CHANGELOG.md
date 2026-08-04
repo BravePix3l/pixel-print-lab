@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.2] - 2026-08-04
+
+### Fixed
+
+- Updated the GitHub Container Registry namespace after the repository ownership transfer so release images can be published.
+
 ## [1.2.1] - 2026-08-04
 
 ### Changed
