@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Pannello amministrativo di Pixel Print Lab.">
-    <title>Amministrazione | Pixel Print Lab</title>
-    <link rel="stylesheet" href="/styles.css?v=1.1.1">
-    <link rel="stylesheet" href="/admin.css?v=1.1.1">
+    <title>Control Room | Pixel Print Lab | PIX3LLAB</title>
+    <link rel="icon" href="/brand/PIX3LLAB-favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css?v=1.2.0">
+    <link rel="stylesheet" href="/admin.css?v=1.2.0">
   </head>
   <body class="admin-body">
     <main class="admin-shell">
       <section class="admin-login" id="login-view" aria-labelledby="login-title">
-        <div class="admin-login__mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <img class="admin-login__logo" src="/brand/PIX3LLAB-lockup-dark.svg" alt="PIX3LLAB, Personal Digital Lab">
         <p class="section-number">Area riservata</p>
         <h1 id="login-title">Pixel Print<br>Control Room</h1>
         <p>Inserisci le credenziali amministrative configurate sul server.</p>
@@ -28,9 +29,12 @@
 
       <section class="admin-dashboard" id="dashboard-view" aria-labelledby="dashboard-title" hidden>
         <header class="admin-header">
-          <a class="brand" href="/" aria-label="Pixel Print Lab, catalogo">
-            <span class="brand__mark" aria-hidden="true"></span>
-            <span>Pixel Print Lab</span>
+          <a class="brand" href="/" aria-label="PIX3LLAB, Pixel Print Lab, catalogo">
+            <picture class="brand__logo">
+              <source media="(max-width: 560px)" srcset="/brand/PIX3LLAB-mark.svg">
+              <img src="/brand/PIX3LLAB-lockup-light.svg" alt="PIX3LLAB, Personal Digital Lab">
+            </picture>
+            <span class="brand__product">Pixel Print Lab</span>
           </a>
           <div class="admin-header__center">
             <p class="section-number">Pannello amministrativo</p>
@@ -327,6 +331,6 @@
       </form>
     </template>
 
-    <script type="module" src="/admin.js?v=1.1.1"></script>
+    <script type="module" src="/admin.js?v=1.2.0"></script>
   </body>
 </html>
