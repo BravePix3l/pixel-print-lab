@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.1] - 2026-08-04
+
+### Changed
+
+- Applied the PIX3LLAB visual identity with official logo assets, favicon, and a dark public header.
+- Updated the Control Room sidebar headings with the Dogica display font.
+- Replaced repository screenshots and added captions for the public home page, custom model flow, and Control Room.
+
 ## [1.2.0] - 2026-08-02
 
 ### Added
