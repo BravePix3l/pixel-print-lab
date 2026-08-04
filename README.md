@@ -9,8 +9,6 @@ Friends can pick a model from the catalog or upload a 3MF file, choose color and
 
 > **Note:** this repository page and documentation are in English, but the application interface is currently available only in Italian.
 
-![Pixel Print Lab home page](screenshots/home.png)
-
 ## Table of contents
 
 - [Features](#features)
@@ -33,6 +31,21 @@ Friends can pick a model from the catalog or upload a 3MF file, choose color and
 - **Control Room**: admin panel for managing orders, catalog, colors, and settings.
 - **Email notifications**: optional SMTP alert for every new order.
 - **Basic security**: session-based authentication, rate limiting, security headers, and CSP.
+
+## Screenshots
+
+![Pixel Print Lab home page](screenshots/home.jpg)
+
+*The public home page with printer status, catalog access, and order tracking.*
+
+![Custom 3MF model request](screenshots/modello-personale.jpg)
+
+*The custom model form with 3MF upload, cost estimate, color selection, and quantity.*
+
+![Pixel Print Lab Control Room](screenshots/control-room.jpg)
+
+*The Control Room for viewing requests, updating their status, and reviewing production details.*
+
 ## Quick start
 
 Requirements: Node.js 22+, npm, Git.
