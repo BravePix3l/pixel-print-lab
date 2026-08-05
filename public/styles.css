@@ -116,6 +116,7 @@ button:disabled {
 .brand__logo {
   width: 14rem;
   height: auto;
+  display: block;
   flex: 0 0 auto;
 }
 
@@ -2270,6 +2271,7 @@ h1 em {
   .account-status,
   .cart-status {
     padding: 0.65rem 0.85rem;
+    color: var(--ink);
     font-size: 0.78rem;
     background: var(--paper);
     border: 2px solid var(--ink);
@@ -2476,8 +2478,8 @@ h1 em {
   }
 
   .viewer-dialog {
-    width: calc(100% - 1rem);
-    max-height: calc(100vh - 1rem);
+    width: calc(100% - 2rem);
+    max-height: calc(100vh - 2rem);
     box-shadow: 6px 6px 0 var(--blue);
   }
 
@@ -2548,7 +2550,7 @@ h1 em {
   }
 
   .viewer-viewport {
-    height: min(58vh, 28rem);
+    height: min(46vh, 22rem);
   }
 
   .viewer-controls {
