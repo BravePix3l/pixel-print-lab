@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.2] - 2026-08-05
+
+### Fixed
+
+- Enlarged the mobile PIX3LLAB mark and restored full contrast for the empty cart control.
+- Resized and reflowed mobile 3D viewer content to prevent horizontal overflow.
+
 ## [1.3.1] - 2026-08-05
 
 ### Fixed
