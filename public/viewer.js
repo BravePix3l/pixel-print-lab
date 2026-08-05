@@ -121,10 +121,11 @@ function placeModel(object) {
   scene.add(grid);
 
   initialTarget = new THREE.Vector3(0, size.y * 0.35, 0);
+  const mobileCameraDistance = window.matchMedia("(max-width: 540px)").matches ? 1.35 : 1;
   initialCameraPosition = new THREE.Vector3(
-    largestDimension * 1.35,
-    largestDimension * 1.05,
-    largestDimension * 1.55,
+    largestDimension * 1.35 * mobileCameraDistance,
+    largestDimension * 1.05 * mobileCameraDistance,
+    largestDimension * 1.55 * mobileCameraDistance,
   );
   camera.near = Math.max(largestDimension / 100, 0.01);
   camera.far = largestDimension * 100;

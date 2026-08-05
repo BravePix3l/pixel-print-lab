@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.1] - 2026-08-05
+
+### Fixed
+
+- Ensured the PIX3LLAB mark remains visible in the mobile public header.
+- Reduced the initial 3D model scale on mobile previews.
+
 ## [1.3.0] - 2026-08-05
 
 ### Changed

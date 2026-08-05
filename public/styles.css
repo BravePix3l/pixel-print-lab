@@ -2257,7 +2257,14 @@ h1 em {
   }
 
   .brand__logo {
-    width: 2.25rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .brand__logo img {
+    width: 100%;
+    height: 100%;
+    content: url("/brand/PIX3LLAB-mark.svg");
   }
 
   .cart-bracket {
