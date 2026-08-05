@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.3] - 2026-08-05
+
+### Changed
+
+- Added the fixed standard plate dimensions to the 3D viewer.
+
+### Fixed
+
+- Kept oversized models previewable without showing a compatibility message after loading.
+
 ## [1.3.2] - 2026-08-05
 
 ### Fixed

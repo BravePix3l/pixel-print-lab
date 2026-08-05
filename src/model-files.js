@@ -401,7 +401,7 @@ function determineCompatibility(bounds) {
     status: fits ? "compatible" : "incompatible",
     target: "Piatto standard",
     volumeMm: STANDARD_BUILD_VOLUME_MM,
-    warnings: fits ? [] : [{ code: "OUTSIDE_STANDARD_VOLUME", message: `Il primo piatto supera il volume standard ${STANDARD_BUILD_VOLUME_MM.join("x")} mm.` }],
+    warnings: fits ? [] : [{ code: "OUTSIDE_STANDARD_VOLUME", message: "Il modello potrebbe essere troppo grande: forse dovremo ridurlo o separarlo in piu parti." }],
   };
 }
 

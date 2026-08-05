@@ -2002,6 +2002,20 @@ h1 em {
   text-align: right;
 }
 
+.viewer-plate-size {
+  position: absolute;
+  z-index: 3;
+  top: 0.75rem;
+  left: 0.75rem;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  color: var(--paper);
+  background: var(--ink);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .account-order li span:first-child {
   min-width: 0;
 }
@@ -2581,6 +2595,12 @@ h1 em {
 
   .viewer-viewport {
     height: min(46vh, 22rem);
+  }
+
+  .viewer-plate-size {
+    top: 0.5rem;
+    left: 0.5rem;
+    font-size: 0.55rem;
   }
 
   .viewer-controls {

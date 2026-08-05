@@ -9,6 +9,7 @@ const status = document.querySelector("#viewer-status");
 const resetButton = document.querySelector("#viewer-reset");
 const threeMfLoader = new ThreeMFLoader();
 const unitFactors = { micron: 0.001, millimeter: 1, centimeter: 10, inch: 25.4, foot: 304.8, meter: 1000 };
+const standardBuildVolumeMm = [256, 256, 256];
 
 let renderer;
 let scene;
@@ -100,7 +101,7 @@ function disposeObject(object, protectedResources = { geometries: new Set(), mat
   resources.textures.forEach((texture) => { if (!protectedResources.textures.has(texture)) texture.dispose(); });
 }
 
-function placeModel(object) {
+function placeModel(object, referencePlateVolume = standardBuildVolumeMm) {
   object.rotation.x = -Math.PI / 2;
   object.updateMatrixWorld(true);
   const firstBox = new THREE.Box3().setFromObject(object);
@@ -114,7 +115,7 @@ function placeModel(object) {
   model = object;
   scene.add(model);
 
-  const gridSize = largestDimension * 3.5;
+  const gridSize = Math.max(referencePlateVolume[0], referencePlateVolume[1]);
   grid = new THREE.GridHelper(gridSize, 20, 0x17201a, 0x8c938e);
   grid.material.transparent = true;
   grid.material.opacity = 0.45;
@@ -237,7 +238,7 @@ export async function openModelViewer(product, colorHex = "#ffffff", availableCo
       disposeObject(loadedObject);
       return;
     }
-    placeModel(loadedObject);
+    placeModel(loadedObject, product.inspection?.referencePlate?.volumeMm);
     viewport.classList.remove("viewer-viewport--loading");
     status.hidden = true;
     resetButton.disabled = false;

@@ -693,10 +693,7 @@ customPreviewButton.addEventListener("click", async () => {
     customFeedback.textContent = "Controllo del progetto 3MF...";
     inspectedUpload = await inspectedModelFor(file);
     await openModelViewer(inspectedUpload, colorHex, colors);
-    const compatibility = inspectedUpload.inspection?.compatibility;
-    customFeedback.textContent = compatibility?.status === "incompatible"
-      ? compatibility.warnings[0]?.message ?? "Il progetto supera il volume della stampante."
-      : "Primo piatto pronto e compreso nel volume standard.";
+    customFeedback.textContent = "";
   } catch (error) {
     customFeedback.textContent = error.message;
     customFeedback.classList.add("custom-feedback--error");

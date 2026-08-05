@@ -489,6 +489,9 @@ test("usa un unico piatto standard come riferimento informativo", async () => {
     assert.equal(response.status, 201);
     assert.equal(model.inspection.compatibility.status, scenario.expectedStatus);
     assert.equal(model.inspection.compatibility.target, "Piatto standard");
+    if (scenario.expectedStatus === "incompatible") {
+      assert.equal(model.inspection.compatibility.warnings[0].message, "Il modello potrebbe essere troppo grande: forse dovremo ridurlo o separarlo in piu parti.");
+    }
     await fetch(`${baseUrl}/api/custom-models/${model.id}`, { method: "DELETE" });
   }
 });
