@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.0] - 2026-08-05
+
+### Changed
+
+- Updated Docker Compose and documentation to pull images from the BravePix3l GitHub Container Registry namespace.
+
+### Fixed
+
+- Restored the logo and action label contrast in the mobile public header.
+- Reduced the mobile 3D viewer dialog while retaining the desktop layout.
+
 ## [1.2.2] - 2026-08-04
 
 ### Fixed
