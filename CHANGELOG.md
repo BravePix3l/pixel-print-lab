@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.4.0] - 2026-08-09
+
+### Added
+
+- Added support for inspecting and switching between plates in multi-plate Bambu Studio projects.
+- Added per-plate volume, material, time, and price estimates with a combined project total.
+
+### Changed
+
+- Stored the complete multi-plate estimate with custom model orders.
+
 ## [1.3.3] - 2026-08-05
 
 ### Changed
