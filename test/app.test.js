@@ -81,7 +81,7 @@ async function authenticateAdmin() {
   return response.headers.get("set-cookie").split(";", 1)[0];
 }
 
-function create3mfBuffer({ bambu = false, gcode = false, malformedModel = false, modelOverride, secondaryModel, firstSize = [20, 30, 40], repeatFirstObject = false } = {}) {
+function create3mfBuffer({ bambu = false, gcode = false, malformedModel = false, modelOverride, secondaryModel, firstSize = [20, 30, 40], repeatFirstObject = false, secondTransform = "1 0 0 0 1 0 0 0 1 250 0 0" } = {}) {
   const secondBuildObjectId = repeatFirstObject ? 1 : 2;
   const model = modelOverride ?? (malformedModel ? "<model><broken>" : `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
@@ -99,7 +99,7 @@ function create3mfBuffer({ bambu = false, gcode = false, malformedModel = false,
       <vertex x="0" y="200" z="0"/><vertex x="0" y="0" z="200"/>
     </vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object>
   </resources>
-  <build><item objectid="1"/><item objectid="${secondBuildObjectId}" transform="1 0 0 0 1 0 0 0 1 250 0 0"/></build>
+  <build><item objectid="1"/><item objectid="${secondBuildObjectId}" transform="${secondTransform}"/></build>
 </model>`);
   const relationships = `<?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -839,6 +839,10 @@ test("stima il costo di un modello 3MF dal volume misurato", async () => {
   assert.deepEqual(quote.breakdown, { materialCents: 1, energyCents: 2, wearCents: 27 });
   assert.equal(quote.unitPriceCents, 500);
   assert.equal(quote.estimateOnly, true);
+  assert.equal(quote.plates.length, 1);
+  assert.equal(quote.plates[0].id, 1);
+  assert.equal(quote.plates[0].volumeMm3, 1000);
+  assert.equal(quote.plates[0].unitPriceCents, 500);
   await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
 });
 
@@ -856,6 +860,42 @@ test("stima il costo di un modello 3MF dal volume misurato", async () => {
   assert.equal(quote.volumeMm3, 4000);
   assert.equal(quote.grams, 3);
   assert.equal(quote.unitPriceCents, 500);
+  assert.equal(quote.plates.length, 1);
+  assert.equal(quote.plates[0].id, 1);
+  assert.equal(quote.plates[0].volumeMm3, 4000);
+  assert.equal(quote.plates[0].unitPriceCents, 500);
+  await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
+});
+
+test("stima il progetto Bambu sommando i volumi dei piatti", async () => {
+  const form = new FormData();
+  form.append("model", new Blob([await create3mfBuffer({
+    bambu: true,
+    repeatFirstObject: true,
+    secondTransform: "1 0 0 0 1 0 0 0 1 0 0 0",
+  })], { type: "model/3mf" }), "multi-piatto.3mf");
+  const uploadResponse = await fetch(`${baseUrl}/api/custom-models/upload`, { method: "POST", body: form });
+  const upload = (await uploadResponse.json()).data;
+  assert.equal(uploadResponse.status, 201);
+  assert.equal(upload.inspection.plateCount, 2);
+  assert.equal(upload.inspection.totalVolumeMm3, 8000);
+  assert.equal(upload.inspection.plates.length, 2);
+  assert.equal(upload.inspection.plates[0].volumeMm3, 4000);
+  assert.equal(upload.inspection.plates[1].volumeMm3, 4000);
+
+  const quoteResponse = await fetch(`${baseUrl}/api/custom-models/${upload.id}/quote`);
+  const quote = (await quoteResponse.json()).data;
+  assert.equal(quoteResponse.status, 200);
+  assert.equal(quote.volumeMm3, 8000);
+  assert.equal(quote.grams, 6);
+  assert.equal(quote.unitPriceCents, 1000);
+  assert.equal(quote.plates.length, 2);
+  assert.equal(quote.plates[0].id, 1);
+  assert.equal(quote.plates[0].volumeMm3, 4000);
+  assert.equal(quote.plates[0].unitPriceCents, 500);
+  assert.equal(quote.plates[1].id, 2);
+  assert.equal(quote.plates[1].volumeMm3, 4000);
+  assert.equal(quote.plates[1].unitPriceCents, 500);
   await fetch(`${baseUrl}/api/custom-models/${upload.id}`, { method: "DELETE" });
 });
 

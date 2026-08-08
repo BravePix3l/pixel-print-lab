@@ -20,13 +20,23 @@ function modelFormatFor(item) {
 
 function isValidInspection(inspection) {
   if (!inspection || typeof inspection !== "object") return false;
+  const platesValid = !inspection.plates || (
+    Array.isArray(inspection.plates) && inspection.plates.length <= 100 &&
+    inspection.plates.every((plate) => (
+      Number.isInteger(plate.id) && plate.id > 0 &&
+      Number.isFinite(plate.volumeMm3) && plate.volumeMm3 >= 0 &&
+      plate.boundsMm && Array.isArray(plate.boundsMm.size) && plate.boundsMm.size.length === 3 &&
+      plate.boundsMm.size.every((value) => Number.isFinite(value) && value >= 0)
+    ))
+  );
   return (
     ["generic", "bambu"].includes(inspection.projectType) &&
     Number.isInteger(inspection.plateCount) && inspection.plateCount > 0 && inspection.plateCount <= 100 &&
     Array.isArray(inspection.previewBuildItemIndexes) && inspection.previewBuildItemIndexes.length <= 10_000 &&
     inspection.previewBuildItemIndexes.every((index) => Number.isInteger(index) && index >= 0) &&
     inspection.boundsMm && Array.isArray(inspection.boundsMm.size) && inspection.boundsMm.size.length === 3 &&
-    inspection.boundsMm.size.every((value) => Number.isFinite(value) && value >= 0)
+    inspection.boundsMm.size.every((value) => Number.isFinite(value) && value >= 0) &&
+    platesValid
   );
 }
 

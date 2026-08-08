@@ -13,7 +13,7 @@ import {
   ModelFileError,
   modelContentType,
 } from "./model-files.js";
-import { calculateQuote, readPricingSettings } from "./pricing.js";
+import { calculateProjectQuote, readPricingSettings } from "./pricing.js";
 import { RateLimiter, rateLimitMiddleware } from "./rate-limiter.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -223,19 +223,20 @@ export function registerCustomModelRoutes(
         throw new CustomModelError("UPLOAD_NOT_FOUND", "Il file temporaneo non esiste piu.", 404);
       }
       const measurements = await measureModelFile(modelPath, modelFormat);
-      if (!measurements.volumeMm3 || measurements.volumeMm3 <= 0) {
+      if (!measurements.totalVolumeMm3 || measurements.totalVolumeMm3 <= 0) {
         throw new CustomModelError(
           "MODEL_VOLUME_UNAVAILABLE",
           "Non e stato possibile stimare il volume del modello: la geometria potrebbe essere aperta o degenere.",
           422,
         );
       }
-      const quote = calculateQuote(measurements.volumeMm3, readPricingSettings(database));
+      const pricing = readPricingSettings(database);
+      const quote = calculateProjectQuote(measurements.plates ?? [measurements], pricing);
       return response.json({
         data: {
           id: request.params.id,
           modelFormat,
-          volumeMm3: measurements.volumeMm3,
+          volumeMm3: measurements.totalVolumeMm3,
           boundsMm: measurements.boundsMm,
           ...quote,
           estimateOnly: true,

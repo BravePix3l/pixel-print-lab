@@ -1178,6 +1178,36 @@ h1 em {
   line-height: 1.5;
 }
 
+.quote-plates {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 2px dashed var(--muted);
+}
+
+.quote-plates__title {
+  margin: 0 0 0.4rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quote-plates__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+}
+
+.quote-plates__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .link-field input {
   width: 100%;
   min-height: 3rem;
@@ -1551,6 +1581,7 @@ h1 em {
 .viewer-controls {
   padding-top: 1rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -2065,6 +2096,40 @@ h1 em {
   font-size: 0.7rem;
   line-height: 1.5;
   text-transform: uppercase;
+}
+
+.viewer-controls .plate-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.plate-option {
+  min-height: 1.75rem;
+  padding: 0.35rem 0.65rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  font-family: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.plate-option--active {
+  color: var(--paper);
+  background: var(--ink);
+  box-shadow: 3px 3px 0 var(--orange);
+}
+
+.plate-option:not(:disabled):hover,
+.plate-option:not(:disabled):focus-visible {
+  color: var(--paper);
+  background: var(--ink);
+  outline: none;
 }
 
 .viewer-controls .color-options {
@@ -2615,7 +2680,8 @@ h1 em {
     text-align: center;
   }
 
-  .viewer-controls .color-options {
+  .viewer-controls .color-options,
+  .viewer-controls .plate-options {
     max-width: 100%;
   }
 

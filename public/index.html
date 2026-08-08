@@ -173,6 +173,10 @@
                 <div><dt>Prezzo al pezzo</dt><dd id="quote-unit">-</dd></div>
                 <div class="quote-panel__total"><dt>Totale stimato</dt><dd id="quote-total">-</dd></div>
               </dl>
+              <div class="quote-plates" id="quote-plates" hidden>
+                <p class="quote-plates__title">Stima per piatto</p>
+                <ul class="quote-plates__list" id="quote-plates-list"></ul>
+              </div>
               <p class="quote-panel__note">Calcolata su volume, bobina, energia e usura macchina. Il prezzo finale viene confermato dopo il controllo del file.</p>
             </div>
           </div>
@@ -277,6 +281,7 @@
         </div>
 
         <footer class="viewer-controls">
+          <div class="plate-options" id="viewer-plate-options"></div>
           <div class="color-options" id="viewer-color-options"></div>
           <p><strong>Trascina</strong> per ruotare <span aria-hidden="true">/</span> <strong>Rotella o gesto</strong> per zoomare</p>
           <button class="reset-view" id="viewer-reset" type="button" disabled>Ripristina visuale</button>

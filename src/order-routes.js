@@ -15,7 +15,7 @@ import {
   modelExtension,
   sanitizeOriginalModelName,
 } from "./model-files.js";
-import { calculateQuote, readPricingSettings } from "./pricing.js";
+import { calculateProjectQuote, readPricingSettings } from "./pricing.js";
 
 import { RateLimiter, rateLimitMiddleware } from "./rate-limiter.js";
 
@@ -284,7 +284,7 @@ export function registerOrderRoutes(
           const modelMetadata = await inspectModelFile(temporaryFilename, modelFormat);
           const measurements = await measureModelFile(temporaryFilename, modelFormat);
           const quote = measurements.volumeMm3 > 0
-            ? calculateQuote(measurements.volumeMm3, readPricingSettings(database))
+            ? calculateProjectQuote(measurements.plates ?? [measurements], readPricingSettings(database))
             : null;
           const originalName = sanitizeOriginalModelName(item.name, modelFormat);
           validatedItems.push({
@@ -304,7 +304,7 @@ export function registerOrderRoutes(
             modelFormat,
             modelMetadata,
             modelMetadataJson: modelMetadata ? JSON.stringify(modelMetadata) : null,
-            quoteJson: quote ? JSON.stringify({ ...quote, volumeMm3: measurements.volumeMm3 }) : null,
+            quoteJson: quote ? JSON.stringify({ ...quote, volumeMm3: measurements.totalVolumeMm3 }) : null,
             uploadId: item.id,
             temporaryFilename,
           });

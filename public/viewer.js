@@ -18,11 +18,15 @@ let controls;
 let model;
 let grid;
 const colorOptionsContainer = document.querySelector("#viewer-color-options");
+const plateOptionsContainer = document.querySelector("#viewer-plate-options");
 let currentMaterial;
 let resizeObserver;
 let loadVersion = 0;
 let initialCameraPosition;
 let initialTarget;
+let allChildren = [];
+let currentPlateId;
+let currentInspection;
 
 function resizeRenderer() {
   if (!renderer || viewport.clientWidth === 0 || viewport.clientHeight === 0) {
@@ -65,10 +69,10 @@ function initializeViewer() {
   resizeObserver.observe(viewport);
 }
 
-function clearModel() {
+function clearModel(protectedResources = { geometries: new Set(), materials: new Set(), textures: new Set() }) {
   if (model) {
     scene.remove(model);
-    disposeObject(model);
+    disposeObject(model, protectedResources);
     model = undefined;
   }
   if (grid) {
@@ -79,7 +83,46 @@ function clearModel() {
   }
 }
 
-function collectResources(object) {
+function collectResourcesFromChildren(children) {
+  const geometries = new Set();
+  const materials = new Set();
+  const textures = new Set();
+  for (const child of children) {
+    child.traverse((node) => {
+      if (node.geometry) geometries.add(node.geometry);
+      const nodeMaterials = Array.isArray(node.material) ? node.material : [node.material];
+      nodeMaterials.filter(Boolean).forEach((material) => materials.add(material));
+    });
+  }
+  materials.forEach((material) => {
+    Object.values(material).forEach((value) => { if (value?.isTexture) textures.add(value); });
+  });
+  return { geometries, materials, textures };
+}
+
+function disposeResources(resources) {
+  resources.geometries.forEach((geometry) => geometry.dispose());
+  resources.materials.forEach((material) => material.dispose());
+  resources.textures.forEach((texture) => texture.dispose());
+}
+
+function clearLoadedModel() {
+  const resources = collectResourcesFromChildren(allChildren);
+  if (model) {
+    scene.remove(model);
+    model = undefined;
+  }
+  if (grid) {
+    scene.remove(grid);
+    grid.geometry.dispose();
+    grid.material.dispose();
+    grid = undefined;
+  }
+  disposeResources(resources);
+  allChildren = [];
+}
+
+function disposeObject(object, protectedResources = { geometries: new Set(), materials: new Set(), textures: new Set() }) {
   const geometries = new Set();
   const materials = new Set();
   const textures = new Set();
@@ -91,14 +134,9 @@ function collectResources(object) {
   materials.forEach((material) => {
     Object.values(material).forEach((value) => { if (value?.isTexture) textures.add(value); });
   });
-  return { geometries, materials, textures };
-}
-
-function disposeObject(object, protectedResources = { geometries: new Set(), materials: new Set(), textures: new Set() }) {
-  const resources = collectResources(object);
-  resources.geometries.forEach((geometry) => { if (!protectedResources.geometries.has(geometry)) geometry.dispose(); });
-  resources.materials.forEach((material) => { if (!protectedResources.materials.has(material)) material.dispose(); });
-  resources.textures.forEach((texture) => { if (!protectedResources.textures.has(texture)) texture.dispose(); });
+  geometries.forEach((geometry) => { if (!protectedResources.geometries.has(geometry)) geometry.dispose(); });
+  materials.forEach((material) => { if (!protectedResources.materials.has(material)) material.dispose(); });
+  textures.forEach((texture) => { if (!protectedResources.textures.has(texture)) texture.dispose(); });
 }
 
 function placeModel(object, referencePlateVolume = standardBuildVolumeMm) {
@@ -177,12 +215,55 @@ function createViewerColorOption(color, groupName, selected) {
   return label;
 }
 
+function createPlateOption(plate, selected) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "plate-option";
+  if (selected) button.classList.add("plate-option--active");
+  button.textContent = `Piatto ${plate.id}`;
+  button.dataset.plateId = String(plate.id);
+  button.addEventListener("click", () => showPlate(plate.id));
+  return button;
+}
+
+function updatePlateOptionButtons() {
+  plateOptionsContainer.querySelectorAll(".plate-option").forEach((button) => {
+    button.classList.toggle("plate-option--active", Number(button.dataset.plateId) === currentPlateId);
+  });
+}
+
+function showPlate(plateId) {
+  if (!allChildren.length) return;
+  const plates = currentInspection?.plates?.length
+    ? currentInspection.plates
+    : [{ id: 1, buildItemIndexes: allChildren.map((_child, index) => index) }];
+  const plate = plates.find((item) => item.id === plateId) ?? plates[0];
+  currentPlateId = plate.id;
+  const indexes = new Set(plate.buildItemIndexes);
+
+  const newGroup = new THREE.Group();
+  allChildren.forEach((child, index) => {
+    if (indexes.has(index)) newGroup.add(child);
+  });
+
+  const unitFactor = unitFactors[currentInspection?.unit ?? "millimeter"];
+  if (!unitFactor) throw new Error("Unita 3MF non supportata.");
+  newGroup.scale.setScalar(unitFactor);
+
+  const protectedResources = collectResourcesFromChildren(allChildren);
+  clearModel(protectedResources);
+  placeModel(newGroup, currentInspection?.referencePlate?.volumeMm);
+  updatePlateOptionButtons();
+}
+
 export async function openModelViewer(product, colorHex = "#ffffff", availableColors = []) {
   initializeViewer();
   const currentLoad = ++loadVersion;
-  clearModel();
+  clearLoadedModel();
   currentMaterial = undefined;
-  const modelColor = Number.parseInt(colorHex.replace("#", ""), 16);
+  currentPlateId = undefined;
+  currentInspection = product.inspection ?? null;
+  plateOptionsContainer.replaceChildren();
   title.textContent = product.name;
   viewport.setAttribute("aria-label", `Visualizzatore 3D di ${product.name}`);
   viewport.classList.add("viewer-viewport--loading");
@@ -215,30 +296,28 @@ export async function openModelViewer(product, colorHex = "#ffffff", availableCo
       throw new Error("Il viewer supporta solo file 3MF.");
     }
     loadedObject = await threeMfLoader.loadAsync(product.modelUrl);
-    const previewIndexes = new Set(product.inspection?.previewBuildItemIndexes ?? loadedObject.children.map((_child, index) => index));
-    const removedChildren = [];
-    [...loadedObject.children].forEach((child, index) => {
-      if (!previewIndexes.has(index)) {
-        loadedObject.remove(child);
-        removedChildren.push(child);
-      }
-    });
-    const retainedResources = collectResources(loadedObject);
-    removedChildren.forEach((child) => disposeObject(child, retainedResources));
-    const unitFactor = unitFactors[product.inspection?.unit ?? "millimeter"];
-    if (!unitFactor) throw new Error("Unita 3MF non supportata.");
-    loadedObject.scale.setScalar(unitFactor);
-    currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
-    loadedObject.traverse((child) => {
-      if (child.isMesh) {
-        child.material = currentMaterial;
-      }
-    });
     if (currentLoad !== loadVersion) {
       disposeObject(loadedObject);
       return;
     }
-    placeModel(loadedObject, product.inspection?.referencePlate?.volumeMm);
+
+    allChildren = [...loadedObject.children];
+    const modelColor = Number.parseInt((availableColors[selectedIndex]?.hexValue ?? colorHex).replace("#", ""), 16);
+    currentMaterial = new THREE.MeshStandardMaterial({ color: modelColor, roughness: 0.72, metalness: 0.02, flatShading: true });
+    allChildren.forEach((child) => {
+      child.traverse((node) => {
+        if (node.isMesh) node.material = currentMaterial;
+      });
+    });
+
+    const plates = currentInspection?.plates ?? [];
+    if (plates.length > 1) {
+      plates.forEach((plate, index) => {
+        plateOptionsContainer.append(createPlateOption(plate, index === 0));
+      });
+    }
+
+    showPlate(currentInspection?.previewPlate ?? plates[0]?.id ?? 1);
     viewport.classList.remove("viewer-viewport--loading");
     status.hidden = true;
     resetButton.disabled = false;
@@ -255,6 +334,6 @@ resetButton.addEventListener("click", resetView);
 dialog.addEventListener("close", () => {
   loadVersion += 1;
   renderer?.setAnimationLoop(null);
-  clearModel();
+  clearLoadedModel();
   viewport.classList.remove("viewer-viewport--error", "viewer-viewport--loading");
 });

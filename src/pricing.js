@@ -46,6 +46,47 @@ export function calculateQuote(volumeMm3, pricing = PRICING_DEFAULTS) {
   return finalizeQuote({ grams, hours }, pricing);
 }
 
+export function calculateProjectQuote(plates, pricing = PRICING_DEFAULTS) {
+  const plateQuotes = plates.map((plate) => {
+    if (!plate.volumeMm3 || plate.volumeMm3 <= 0) {
+      return {
+        id: plate.id ?? 1,
+        volumeMm3: plate.volumeMm3 ?? 0,
+        grams: 0,
+        hours: 0,
+        breakdown: { materialCents: 0, energyCents: 0, wearCents: 0 },
+        unitPriceCents: 0,
+      };
+    }
+    return {
+      id: plate.id ?? 1,
+      volumeMm3: plate.volumeMm3,
+      ...calculateQuote(plate.volumeMm3, pricing),
+    };
+  });
+  const total = plateQuotes.reduce((quote, plate) => ({
+    grams: quote.grams + plate.grams,
+    hours: quote.hours + plate.hours,
+    breakdown: {
+      materialCents: quote.breakdown.materialCents + plate.breakdown.materialCents,
+      energyCents: quote.breakdown.energyCents + plate.breakdown.energyCents,
+      wearCents: quote.breakdown.wearCents + plate.breakdown.wearCents,
+    },
+    unitPriceCents: quote.unitPriceCents + plate.unitPriceCents,
+  }), {
+    grams: 0,
+    hours: 0,
+    breakdown: { materialCents: 0, energyCents: 0, wearCents: 0 },
+    unitPriceCents: 0,
+  });
+  return {
+    ...total,
+    grams: Math.round(total.grams * 10) / 10,
+    hours: Math.round(total.hours * 100) / 100,
+    plates: plateQuotes,
+  };
+}
+
 const PRICING_SELECT = `
   SELECT
     price_filament_cents_per_kg AS filamentPriceCentsPerKg,

@@ -106,6 +106,11 @@ test("conserva un progetto 3MF ispezionato e rifiuta formati incoerenti", () => 
     plateCount: 2,
     previewBuildItemIndexes: [0],
     boundsMm: { min: [0, 0, 0], max: [20, 30, 40], size: [20, 30, 40] },
+    totalVolumeMm3: 4000,
+    plates: [
+      { id: 1, volumeMm3: 4000, boundsMm: { min: [0, 0, 0], max: [20, 30, 40], size: [20, 30, 40] } },
+      { id: 2, volumeMm3: 0, boundsMm: { min: [0, 0, 0], max: [0, 0, 0], size: [0, 0, 0] } },
+    ],
     compatibility: { status: "compatible" },
   };
   const selection = {

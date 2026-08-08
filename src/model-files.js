@@ -442,8 +442,8 @@ async function load3mfModel(filename) {
   ) {
     throw new ModelFileError("3MF_GEOMETRY_TOO_COMPLEX", "L'insieme delle parti modello supera i limiti di sicurezza.");
   }
-  const plateBuffer = entries.get("metadata/model_settings.config")?.content;
-  const plates = plateBuffer ? parseBambuPlates(plateBuffer) : [];
+  const modelSettingsBuffer = entries.get("metadata/model_settings.config")?.content;
+  const plates = modelSettingsBuffer ? parseBambuPlates(modelSettingsBuffer) : [];
   const validPlates = plates
     .map((plate) => ({ ...plate, id: Number(plate.metadata.plater_id) }))
     .filter((plate) => Number.isInteger(plate.id) && plate.id > 0)
@@ -451,54 +451,69 @@ async function load3mfModel(filename) {
   if (plates.length && (validPlates.length !== plates.length || new Set(validPlates.map(({ id }) => id)).size !== validPlates.length)) {
     throw new ModelFileError("INVALID_BAMBU_PLATE", "Gli identificativi dei piatti Bambu non sono validi.");
   }
-  const firstPlate = validPlates[0];
-  let previewBuildItemIndexes = model.buildItems.map((_item, index) => index);
-  if (plates.length) {
-    if (!firstPlate || !firstPlate.instances.length) throw new ModelFileError("INVALID_BAMBU_PLATE", "Il primo piatto Bambu non contiene istanze valide.");
-    const allInstancesByObject = new Map();
-    for (const plate of validPlates) for (const item of plate.instances) {
-      const objectId = Number(item.object_id);
-      const instanceId = Number(item.instance_id);
-      if (!Number.isInteger(objectId) || !Number.isInteger(instanceId) || objectId <= 0 || instanceId < 0) {
-        throw new ModelFileError("INVALID_BAMBU_PLATE", "Un'istanza dei piatti Bambu non e valida.");
-      }
-      if (!allInstancesByObject.has(objectId)) allInstancesByObject.set(objectId, []);
-      allInstancesByObject.get(objectId).push(instanceId);
+  const allInstancesByObject = new Map();
+  for (const plate of validPlates) for (const item of plate.instances) {
+    const objectId = Number(item.object_id);
+    const instanceId = Number(item.instance_id);
+    if (!Number.isInteger(objectId) || !Number.isInteger(instanceId) || objectId <= 0 || instanceId < 0) {
+      throw new ModelFileError("INVALID_BAMBU_PLATE", "Un'istanza dei piatti Bambu non e valida.");
     }
-    for (const ids of allInstancesByObject.values()) {
-      if (new Set(ids).size !== ids.length) throw new ModelFileError("INVALID_BAMBU_PLATE", "Le istanze dei piatti Bambu non sono univoche.");
-    }
-    const firstInstancesByObject = new Map();
-    for (const item of firstPlate.instances) {
+    if (!allInstancesByObject.has(objectId)) allInstancesByObject.set(objectId, []);
+    allInstancesByObject.get(objectId).push(instanceId);
+  }
+  for (const ids of allInstancesByObject.values()) {
+    if (new Set(ids).size !== ids.length) throw new ModelFileError("INVALID_BAMBU_PLATE", "Le istanze dei piatti Bambu non sono univoche.");
+  }
+  const zeroBasedObjects = validPlates.length
+    ? new Set([...allInstancesByObject].filter(([, ids]) => ids.includes(0)).map(([objectId]) => objectId))
+    : new Set();
+
+  function buildItemIndexesForPlate(plate) {
+    if (!plate || !plate.instances.length) return [];
+    const plateInstancesByObject = new Map();
+    for (const item of plate.instances) {
       const objectId = Number(item.object_id);
       const instanceId = Number(item.instance_id);
       if (!Number.isInteger(objectId) || !Number.isInteger(instanceId) || instanceId < 0) continue;
-      if (!firstInstancesByObject.has(objectId)) firstInstancesByObject.set(objectId, []);
-      firstInstancesByObject.get(objectId).push(instanceId);
+      if (!plateInstancesByObject.has(objectId)) plateInstancesByObject.set(objectId, []);
+      plateInstancesByObject.get(objectId).push(instanceId);
     }
-    const zeroBasedObjects = new Set([...allInstancesByObject].filter(([, ids]) => ids.includes(0)).map(([objectId]) => objectId));
     const occurrences = new Map();
     const matchedInstances = new Set();
-    previewBuildItemIndexes = model.buildItems.flatMap((item, index) => {
+    const indexes = model.buildItems.flatMap((item, index) => {
       const occurrence = occurrences.get(item.objectId) ?? 0;
       occurrences.set(item.objectId, occurrence + 1);
       const expectedId = zeroBasedObjects.has(item.objectId) ? occurrence : occurrence + 1;
-      if (!firstInstancesByObject.get(item.objectId)?.includes(expectedId)) return [];
+      if (!plateInstancesByObject.get(item.objectId)?.includes(expectedId)) return [];
       matchedInstances.add(`${item.objectId}:${expectedId}`);
       return [index];
     });
-    if (!previewBuildItemIndexes.length || matchedInstances.size !== firstPlate.instances.length) {
-      throw new ModelFileError("INVALID_BAMBU_PLATE", "Il primo piatto Bambu non riferisce tutte le istanze dichiarate.");
+    if (!indexes.length || matchedInstances.size !== plate.instances.length) {
+      throw new ModelFileError("INVALID_BAMBU_PLATE", `Il piatto Bambu ${plate.id} non riferisce tutte le istanze dichiarate.`);
     }
+    return indexes;
   }
+
+  const platesData = validPlates.length
+    ? validPlates.map((plate) => ({ id: plate.id, buildItemIndexes: buildItemIndexesForPlate(plate) }))
+    : [{ id: 1, buildItemIndexes: model.buildItems.map((_item, index) => index) }];
+
+  if (!platesData.length || !platesData[0].buildItemIndexes.length) {
+    throw new ModelFileError("INVALID_BAMBU_PLATE", "Il primo piatto Bambu non contiene istanze valide.");
+  }
+
+  const previewBuildItemIndexes = platesData[0].buildItemIndexes;
+  const firstPlate = validPlates[0];
+
   return {
     unit: model.unit,
     objects: model.objects,
     buildItems: model.buildItems,
     previewBuildItemIndexes,
+    plates: platesData,
     metadata: model.metadata,
-    isBambu: Boolean(plateBuffer),
-    plateCount: plates.length || 1,
+    isBambu: Boolean(modelSettingsBuffer),
+    plateCount: platesData.length,
     previewPlate: firstPlate?.id ?? 1,
   };
 }
@@ -507,6 +522,16 @@ export async function inspect3mfFile(filename) {
   const model = await load3mfModel(filename);
   const rawBounds = calculateBounds(model, model.previewBuildItemIndexes);
   const boundsMm = roundedBounds(rawBounds);
+  const plates = model.plates.map((plate) => {
+    const plateBounds = calculateBounds(model, plate.buildItemIndexes);
+    return {
+      id: plate.id,
+      buildItemIndexes: plate.buildItemIndexes,
+      boundsMm: roundedBounds(plateBounds),
+      volumeMm3: Math.round(plateBounds.volumeMm3 * 1000) / 1000,
+    };
+  });
+  const totalVolumeMm3 = Math.round(plates.reduce((total, plate) => total + plate.volumeMm3, 0) * 1000) / 1000;
   return {
     projectType: model.isBambu ? "bambu" : "generic",
     unit: model.unit,
@@ -515,6 +540,8 @@ export async function inspect3mfFile(filename) {
     previewBuildItemIndexes: model.previewBuildItemIndexes,
     boundsMm,
     volumeMm3: Math.round(rawBounds.volumeMm3 * 1000) / 1000,
+    totalVolumeMm3,
+    plates,
     referencePlate: { name: "Piatto standard", volumeMm: STANDARD_BUILD_VOLUME_MM },
     compatibility: determineCompatibility(rawBounds),
     metadata: model.metadata,
@@ -524,8 +551,10 @@ export async function inspect3mfFile(filename) {
 export async function measureModelFile(filename, _format) {
   const inspection = await inspect3mfFile(filename);
   return {
-    volumeMm3: inspection.volumeMm3,
+    volumeMm3: inspection.totalVolumeMm3,
+    totalVolumeMm3: inspection.totalVolumeMm3,
     boundsMm: inspection.boundsMm,
+    plates: inspection.plates,
     triangleCount: null,
   };
 }

@@ -75,6 +75,8 @@ const quoteGrams = document.querySelector("#quote-grams");
 const quoteHours = document.querySelector("#quote-hours");
 const quoteUnit = document.querySelector("#quote-unit");
 const quoteTotal = document.querySelector("#quote-total");
+const quotePlatesPanel = document.querySelector("#quote-plates");
+const quotePlatesList = document.querySelector("#quote-plates-list");
 const customColorOptions = document.querySelector("#custom-color-options");
 const customQuantityInput = document.querySelector("#custom-quantity");
 const customSubmitButton = document.querySelector("#custom-submit");
@@ -357,6 +359,17 @@ function renderQuote() {
   quoteHours.textContent = `~${currentQuote.hours} h / pezzo`;
   quoteUnit.textContent = `${euroFormatter.format(currentQuote.unitPriceCents / 100)} / cad.`;
   quoteTotal.textContent = euroFormatter.format((currentQuote.unitPriceCents * quantity) / 100);
+  if (currentQuote.plates && currentQuote.plates.length > 1) {
+    quotePlatesList.replaceChildren();
+    for (const plate of currentQuote.plates) {
+      const item = document.createElement("li");
+      item.textContent = `Piatto ${plate.id}: ${euroFormatter.format(plate.unitPriceCents / 100)} / cad. (${plate.grams} g, ~${plate.hours} h)`;
+      quotePlatesList.append(item);
+    }
+    quotePlatesPanel.hidden = false;
+  } else {
+    quotePlatesPanel.hidden = true;
+  }
   customQuotePanel.hidden = false;
 }
 
