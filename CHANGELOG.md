@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.5.0] - 2026-08-13
+
+### Added
+
+- Catalog carousel on desktop: two highlighted models with the next one peeking in transparency, navigable via prev/next buttons and a dots indicator.
+- Product price grouped with height and material inside the catalog card specs.
+
+### Changed
+
+- Fixed-height product description so catalog cards stay aligned regardless of text length.
+- Mobile keeps its existing horizontal scroll carousel; the price no longer appears next to the product name.
+
 ## [1.4.0] - 2026-08-09
 
 ### Added

@@ -6,7 +6,7 @@
     <meta name="description" content="Scegli un modello o proponi il tuo file 3MF per una stampa 3D.">
     <title>Pixel Print Lab | PIX3LLAB</title>
     <link rel="icon" href="/brand/PIX3LLAB-favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=1.2.0">
+    <link rel="stylesheet" href="/styles.css?v=1.2.9">
     <script type="importmap">
       {
         "imports": {
@@ -83,7 +83,11 @@
             </header>
 
             <p class="catalog-status" id="catalog-status" role="status">Caricamento catalogo...</p>
-            <div class="product-grid" id="product-list" aria-live="polite" aria-busy="true"></div>
+            <div class="catalog-carousel">
+              <button class="catalog-nav catalog-nav--prev" id="catalog-prev" type="button" aria-label="Modelli precedenti" aria-controls="product-list" disabled>&#8592;</button>
+              <div class="product-grid" id="product-list" aria-live="polite" aria-busy="true"></div>
+              <button class="catalog-nav catalog-nav--next" id="catalog-next" type="button" aria-label="Modelli successivi" aria-controls="product-list" disabled>&#8594;</button>
+            </div>
             <div class="catalog-scroll-indicator" id="catalog-scroll-indicator" aria-hidden="true" hidden></div>
 
             <template id="product-template">
@@ -108,6 +112,7 @@
                   <dl class="product-card__specs">
                     <div><dt data-field="dimension-label"></dt><dd data-field="dimension-value"></dd></div>
                     <div><dt>Materiale</dt><dd data-field="material"></dd></div>
+                    <div class="product-card__spec-price"><dt>Prezzo</dt><dd data-field="price"></dd></div>
                   </dl>
                   <form class="product-card__config" data-field="config-form">
                     <fieldset>
@@ -413,6 +418,6 @@
       </article>
     </template>
 
-    <script type="module" src="/app.js?v=1.2.0"></script>
+    <script type="module" src="/app.js?v=1.2.9"></script>
   </body>
 </html>

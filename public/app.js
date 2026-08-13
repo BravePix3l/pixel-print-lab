@@ -82,7 +82,10 @@ const customQuantityInput = document.querySelector("#custom-quantity");
 const customSubmitButton = document.querySelector("#custom-submit");
 const customFeedback = document.querySelector("#custom-feedback");
 const catalogScrollIndicator = document.querySelector("#catalog-scroll-indicator");
+const catalogPrevButton = document.querySelector("#catalog-prev");
+const catalogNextButton = document.querySelector("#catalog-next");
 const MAX_MODEL_FILE_SIZE = 500 * 1024 * 1024;
+const MAX_DESCRIPTION_LENGTH = 120;
 const euroFormatter = new Intl.NumberFormat("it-IT", {
   style: "currency",
   currency: "EUR",
@@ -140,6 +143,11 @@ function setText(element, field, value) {
   element.querySelector(`[data-field="${field}"]`).textContent = value;
 }
 
+function truncateText(text, maxLength) {
+  if (!text || text.length <= maxLength) return text ?? "";
+  return `${text.slice(0, maxLength).trimEnd()}…`;
+}
+
 function createColorOption(color, groupName, selected) {
   const label = document.createElement("label");
   const input = document.createElement("input");
@@ -178,7 +186,7 @@ function createProductCard(product, index) {
   setText(card, "code", product.code);
   setText(card, "category", product.category);
   setText(card, "name", product.name);
-  setText(card, "description", product.description);
+  setText(card, "description", truncateText(product.description, MAX_DESCRIPTION_LENGTH));
   setText(card, "dimension-label", product.dimension.label);
   setText(card, "dimension-value", product.dimension.value);
   setText(card, "material", product.material);
@@ -929,29 +937,38 @@ checkoutForm.addEventListener("submit", async (event) => {
 function updateCatalogIndicator() {
   if (!catalogScrollIndicator || !productList) return;
   const cards = productList.querySelectorAll(".product-card");
-  if (cards.length <= 1 || productList.scrollWidth <= productList.clientWidth) {
-    catalogScrollIndicator.hidden = true;
+  const maxScroll = productList.scrollWidth - productList.clientWidth;
+  const singlePage = cards.length <= 1 || maxScroll <= 2;
+  catalogScrollIndicator.hidden = singlePage;
+  if (catalogPrevButton) catalogPrevButton.disabled = singlePage || productList.scrollLeft <= 2;
+  if (catalogNextButton) catalogNextButton.disabled = singlePage || productList.scrollLeft >= maxScroll - 2;
+  if (singlePage) {
+    cards.forEach((card) => card.classList.add("is-active"));
     return;
   }
-  catalogScrollIndicator.hidden = false;
+
+  const style = getComputedStyle(productList);
+  const gap = parseFloat(style.gap) || 0;
+  const cardStep = cards[0].offsetWidth + gap;
+  const pageCount = cards.length;
+  const activeStart = Math.min(
+    pageCount - 1,
+    Math.max(0, Math.round(productList.scrollLeft / cardStep)),
+  );
+
+  cards.forEach((card, index) => card.classList.toggle("is-active", index === activeStart || index === activeStart + 1));
+
   const dots = catalogScrollIndicator.querySelectorAll("span");
-  if (dots.length !== cards.length) {
+  if (dots.length !== pageCount) {
     catalogScrollIndicator.innerHTML = "";
-    for (let i = 0; i < cards.length; i += 1) {
+    for (let i = 0; i < pageCount; i += 1) {
       const dot = document.createElement("span");
       dot.setAttribute("aria-hidden", "true");
       catalogScrollIndicator.appendChild(dot);
     }
   }
-  const style = getComputedStyle(productList);
-  const gap = parseFloat(style.gap) || 0;
-  const cardWidth = cards[0].offsetWidth + gap;
-  const activeIndex = Math.min(
-    cards.length - 1,
-    Math.max(0, Math.round(productList.scrollLeft / cardWidth)),
-  );
   catalogScrollIndicator.querySelectorAll("span").forEach((dot, index) => {
-    dot.classList.toggle("active", index === activeIndex);
+    dot.classList.toggle("active", index === activeStart);
   });
 }
 
@@ -1054,6 +1071,23 @@ if (productList && catalogScrollIndicator) {
   window.addEventListener("resize", () => {
     window.requestAnimationFrame(updateCatalogIndicator);
   });
+}
+
+function scrollCatalogByPage(direction) {
+  if (!productList) return;
+  const cards = productList.querySelectorAll(".product-card");
+  if (!cards.length) return;
+  const style = getComputedStyle(productList);
+  const gap = parseFloat(style.gap) || 0;
+  const cardStep = cards[0].offsetWidth + gap;
+  productList.scrollBy({ left: direction * cardStep, behavior: "smooth" });
+}
+
+if (catalogPrevButton) {
+  catalogPrevButton.addEventListener("click", () => scrollCatalogByPage(-1));
+}
+if (catalogNextButton) {
+  catalogNextButton.addEventListener("click", () => scrollCatalogByPage(1));
 }
 
 updateCustomSource();
