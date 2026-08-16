@@ -262,10 +262,9 @@ test("espone i prodotti visibili ordinati", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.count, 2);
-  assert.equal(body.data[0].slug, "vaso-orbitale");
+  assert.equal(body.data[0].code, "0001");
   assert.equal(body.data[0].priceCents, 1200);
-  assert.deepEqual(body.data[0].dimension, { label: "Altezza", value: "14 cm" });
-  assert.equal(body.data[1].slug, "supporto-controller");
+  assert.equal(body.data[1].code, "0002");
 });
 
 test("espone il dettaglio di un prodotto", async () => {
@@ -273,7 +272,7 @@ test("espone il dettaglio di un prodotto", async () => {
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.equal(body.data.code, "MOD_001");
+  assert.equal(body.data.code, "0001");
   assert.equal(body.data.name, "Vaso Orbitale");
 });
 
@@ -301,7 +300,7 @@ test("il seed puo essere eseguito piu volte senza duplicare dati", () => {
 
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM products").get().count, 2);
   assert.equal(database.prepare("SELECT COUNT(*) AS count FROM colors").get().count, 4);
-  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 15);
+  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 16);
   assert.equal(database.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
 });
 
@@ -353,26 +352,24 @@ test("migra un catalogo esistente senza perdere dati e impedisce il riuso degli 
       VALUES (1, 'LEGACY-ORDER', 'Nome', 'Storico', 0);
     `);
 
-    const productBefore = legacyDatabase.prepare("SELECT * FROM products").get();
+    const productBefore = legacyDatabase.prepare("SELECT id, code, name, description, price_cents, image_url, material, model_url, visible, created_at, updated_at FROM products").get();
     const colorBefore = legacyDatabase.prepare("SELECT * FROM colors").get();
     migrateDatabase(legacyDatabase);
 
-    assert.deepEqual(legacyDatabase.prepare("SELECT * FROM products").get(), productBefore);
+    assert.deepEqual(legacyDatabase.prepare("SELECT id, code, name, description, price_cents, image_url, material, model_url, visible, created_at, updated_at FROM products").get(), productBefore);
     assert.deepEqual(legacyDatabase.prepare("SELECT * FROM colors").get(), colorBefore);
     assert.match(legacyDatabase.prepare("SELECT sql FROM sqlite_master WHERE name = 'products'").get().sql, /AUTOINCREMENT/);
     assert.match(legacyDatabase.prepare("SELECT sql FROM sqlite_master WHERE name = 'colors'").get().sql, /AUTOINCREMENT/);
     assert.equal(legacyDatabase.prepare("SELECT model_format FROM order_items WHERE id = 1").get().model_format, "stl");
     assert.equal(legacyDatabase.prepare("SELECT status FROM orders WHERE id = 1").get().status, "in_attesa");
-    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 15);
+    assert.equal(legacyDatabase.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get().count, 16);
     assert.equal(legacyDatabase.prepare("SELECT email_notifications_enabled FROM app_settings WHERE id = 1").get().email_notifications_enabled, 0);
     assert.equal(legacyDatabase.prepare("SELECT admin_username FROM app_settings WHERE id = 1").get().admin_username, null);
-    legacyDatabase.prepare("DELETE FROM products WHERE id = 7").run();
-    const nextId = Number(legacyDatabase.prepare(`
-      INSERT INTO products (
-        code, slug, name, category, description, price_cents, image_url, image_alt,
-        dimension_label, dimension_value, material
-      ) VALUES ('NEXT', 'next', 'Next', 'Test', 'Next', 1, '/next.png', 'Next', 'Lato', '1 cm', 'PLA')
-    `).run().lastInsertRowid);
+      legacyDatabase.prepare("DELETE FROM products WHERE id = 7").run();
+      const nextId = Number(legacyDatabase.prepare(`
+        INSERT INTO products (code, name, description, price_cents, image_url, material)
+        VALUES ('NEXT', 'Next', 'Next', 1, '/next.png', 'PLA')
+      `).run().lastInsertRowid);
     assert.ok(nextId > 7);
   } finally {
     legacyDatabase.close();
@@ -1204,19 +1201,11 @@ test("gestisce prodotti, asset e colori senza alterare gli snapshot degli ordini
 
   function productForm(overrides = {}) {
     const values = {
-      code: "MOD_TEST",
-      slug: "prodotto-test",
       name: "Prodotto Test",
-      category: "Test",
       description: "Prodotto creato dai test amministrativi.",
       priceCents: "1234",
-      imageAlt: "Immagine del prodotto di test",
-      dimensionLabel: "Larghezza",
-      dimensionValue: "10 cm",
       material: "PLA",
       visible: "true",
-      sortOrder: "90",
-      removeModel: "false",
       ...overrides,
     };
     const form = new FormData();
@@ -1224,7 +1213,7 @@ test("gestisce prodotti, asset e colori senza alterare gli snapshot degli ordini
     return form;
   }
 
-  const invalidUpload = productForm({ code: "MOD_BAD", slug: "prodotto-non-valido" });
+  const invalidUpload = productForm();
   invalidUpload.append("image", new Blob([png], { type: "image/png" }), "valida.png");
   invalidUpload.append("unexpected", new Blob(["file non previsto"]), "extra.txt");
   const invalidResponse = await adminFetch("/api/admin/products", { method: "POST", body: invalidUpload });
@@ -1234,7 +1223,7 @@ test("gestisce prodotti, asset e colori senza alterare gli snapshot degli ordini
   const fakeJpeg = Buffer.alloc(107);
   fakeJpeg.set([0xff, 0xd8, 0xff], 0);
   fakeJpeg.set([0xff, 0xd9], fakeJpeg.length - 2);
-  const malformedImage = productForm({ code: "MOD_JPG", slug: "jpeg-non-valido" });
+  const malformedImage = productForm();
   malformedImage.append("image", new Blob([fakeJpeg], { type: "image/jpeg" }), "falso.jpg");
   const malformedResponse = await adminFetch("/api/admin/products", { method: "POST", body: malformedImage });
   assert.equal(malformedResponse.status, 400);
@@ -1313,7 +1302,7 @@ test("gestisce prodotti, asset e colori senza alterare gli snapshot degli ordini
   await assert.rejects(stat(modelPath), { code: "ENOENT" });
   assert.deepEqual(snapshotQuery.get(orderId), originalSnapshot);
 
-  const replacementForm = productForm({ code: "MOD_NEXT", slug: "prodotto-successivo", name: "Prodotto Successivo" });
+  const replacementForm = productForm({ name: "Prodotto Successivo" });
   replacementForm.append("image", new Blob([png], { type: "image/png" }), "successivo.png");
   const replacementResponse = await adminFetch("/api/admin/products", { method: "POST", body: replacementForm });
   const replacement = (await replacementResponse.json()).data;
@@ -1339,10 +1328,9 @@ test("accetta un modello 3MF per i prodotti del catalogo", async () => {
   });
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
   const productValues = {
-    code: "MOD_3MF", slug: "prodotto-3mf", name: "Prodotto 3MF", category: "Test",
-    description: "Prodotto con modello 3MF.", priceCents: "1500", imageAlt: "Immagine 3MF",
-    dimensionLabel: "Altezza", dimensionValue: "5 cm", material: "PLA",
-    visible: "true", sortOrder: "95", removeModel: "false",
+    name: "Prodotto 3MF",
+    description: "Prodotto con modello 3MF.", priceCents: "1500", material: "PLA",
+    visible: "true",
   };
   const buildForm = () => {
     const form = new FormData();

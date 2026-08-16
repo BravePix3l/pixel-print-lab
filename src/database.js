@@ -348,38 +348,59 @@ const migrations = [
       ADD COLUMN actual_quote_json TEXT;
     `,
   },
+  {
+    version: 16,
+    name: "drop_product_metadata_fields",
+    sql: `
+      DROP INDEX IF EXISTS products_visible_sort_idx;
+
+      ALTER TABLE products RENAME TO products_legacy;
+      CREATE TABLE products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        price_cents INTEGER NOT NULL CHECK (price_cents >= 0),
+        image_url TEXT NOT NULL,
+        material TEXT NOT NULL,
+        model_url TEXT,
+        visible INTEGER NOT NULL DEFAULT 1 CHECK (visible IN (0, 1)),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO products (
+        id, code, name, description, price_cents, image_url, material,
+        model_url, visible, created_at, updated_at
+      )
+      SELECT
+        id, code, name, description, price_cents, image_url, material,
+        model_url, visible, created_at, updated_at
+      FROM products_legacy;
+      DROP TABLE products_legacy;
+
+      CREATE INDEX products_visible_sort_idx ON products (visible, id);
+    `,
+  },
 ];
 
 const products = [
   {
-    code: "MOD_001",
-    slug: "vaso-orbitale",
+    code: "0001",
     name: "Vaso Orbitale",
-    category: "Casa / Decorazione",
     description: "Un piccolo vaso geometrico, pensato per fiori secchi e scrivanie con poco spazio.",
     priceCents: 1200,
     imageUrl: "/images/vaso-orbitale.svg",
-    imageAlt: "Vaso arancione sfaccettato su una griglia tecnica",
-    dimensionLabel: "Altezza",
-    dimensionValue: "14 cm",
     material: "PLA",
     modelUrl: null,
-    sortOrder: 10,
   },
   {
-    code: "MOD_002",
-    slug: "supporto-controller",
+    code: "0002",
     name: "Dock Controller",
-    category: "Desk / Gaming",
     description: "Supporto inclinato per tenere il controller visibile, stabile e sempre a portata di mano.",
     priceCents: 950,
     imageUrl: "/images/supporto-controller.svg",
-    imageAlt: "Supporto blu per controller rappresentato in pixel art",
-    dimensionLabel: "Larghezza",
-    dimensionValue: "9 cm",
     material: "PLA",
     modelUrl: null,
-    sortOrder: 20,
   },
 ];
 
@@ -429,13 +450,11 @@ export function migrateDatabase(database) {
 export function seedDatabase(database) {
   const insertProduct = database.prepare(`
     INSERT INTO products (
-      code, slug, name, category, description, price_cents, image_url, image_alt,
-      dimension_label, dimension_value, material, model_url, sort_order
+      code, name, description, price_cents, image_url, material, model_url
     ) VALUES (
-      @code, @slug, @name, @category, @description, @priceCents, @imageUrl, @imageAlt,
-      @dimensionLabel, @dimensionValue, @material, @modelUrl, @sortOrder
+      @code, @name, @description, @priceCents, @imageUrl, @material, @modelUrl
     )
-    ON CONFLICT (slug) DO NOTHING
+    ON CONFLICT (code) DO NOTHING
   `);
   const insertColor = database.prepare(`
     INSERT INTO colors (name, hex_value, sort_order)

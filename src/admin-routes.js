@@ -40,7 +40,7 @@ function sendError(response, error) {
   }
   if (error?.code?.startsWith("SQLITE_CONSTRAINT")) {
     return response.status(409).json({
-      error: { code: "CATALOG_CONFLICT", message: "Codice, slug o nome gia utilizzato." },
+      error: { code: "CATALOG_CONFLICT", message: "Codice o nome gia utilizzato." },
     });
   }
   console.error(error);
@@ -70,26 +70,31 @@ function parseNonNegativeInteger(value, label) {
   return parsed;
 }
 
+function generateNextProductCode(database) {
+  const rows = database.prepare("SELECT code FROM products").all();
+  let max = 0;
+  for (const { code } of rows) {
+    const match = /(\d+)\D*$/.exec(code ?? "");
+    if (match) max = Math.max(max, Number(match[1]));
+  }
+  return String(max + 1).padStart(4, "0");
+}
+
 function validateProduct(body) {
-  const code = requiredText(body.code, "Il codice", 30).toUpperCase();
-  const slug = requiredText(body.slug, "Lo slug", 80).toLowerCase();
-  if (!/^[A-Z0-9_-]+$/.test(code) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-    throw new AdminError("INVALID_CATALOG_FIELD", "Codice o slug non hanno un formato valido.");
+  const rawCode = body?.code;
+  const code = rawCode === undefined || rawCode === null || rawCode === ""
+    ? undefined
+    : requiredText(rawCode, "Il codice", 30).toUpperCase();
+  if (code !== undefined && !/^[A-Z0-9_-]+$/.test(code)) {
+    throw new AdminError("INVALID_CATALOG_FIELD", "Il codice non ha un formato valido.");
   }
   return {
     code,
-    slug,
     name: requiredText(body.name, "Il nome"),
-    category: requiredText(body.category, "La categoria"),
     description: requiredText(body.description, "La descrizione", 1000),
     priceCents: parseNonNegativeInteger(body.priceCents, "Il prezzo"),
-    imageAlt: requiredText(body.imageAlt, "Il testo alternativo", 180),
-    dimensionLabel: requiredText(body.dimensionLabel, "L'etichetta della dimensione", 60),
-    dimensionValue: requiredText(body.dimensionValue, "Il valore della dimensione", 60),
     material: requiredText(body.material, "Il materiale", 80),
     visible: parseBoolean(body.visible, "La visibilita"),
-    sortOrder: parseNonNegativeInteger(body.sortOrder, "L'ordine"),
-    removeModel: body.removeModel === true || body.removeModel === "true" || body.removeModel === "1",
   };
 }
 
@@ -98,20 +103,14 @@ async function serializeAdminProduct(product, catalogDirectory = defaultCatalogD
   return {
     id: product.id,
     code: product.code,
-    slug: product.slug,
     name: product.name,
-    category: product.category,
     description: product.description,
     priceCents: product.price_cents,
     imageUrl: product.image_url,
-    imageAlt: product.image_alt,
-    dimensionLabel: product.dimension_label,
-    dimensionValue: product.dimension_value,
     material: product.material,
     modelUrl: product.model_url,
     inspection,
     visible: Boolean(product.visible),
-    sortOrder: product.sort_order,
   };
 }
 
@@ -244,24 +243,17 @@ export function registerAdminRoutes(
   const findItem = database.prepare("SELECT * FROM order_items WHERE id = ? AND order_id = ?");
   const findAnyProduct = database.prepare("SELECT * FROM products WHERE id = ?");
   const findAnyColor = database.prepare("SELECT * FROM colors WHERE id = ?");
-  const listAdminProducts = database.prepare("SELECT * FROM products ORDER BY sort_order, id");
+  const listAdminProducts = database.prepare("SELECT * FROM products ORDER BY id");
   const listAdminColors = database.prepare("SELECT * FROM colors ORDER BY sort_order, id");
   const insertProduct = database.prepare(`
-    INSERT INTO products (
-      code, slug, name, category, description, price_cents, image_url, image_alt,
-      dimension_label, dimension_value, material, model_url, visible, sort_order
-    ) VALUES (
-      @code, @slug, @name, @category, @description, @priceCents, @imageUrl, @imageAlt,
-      @dimensionLabel, @dimensionValue, @material, @modelUrl, @visible, @sortOrder
-    )
+    INSERT INTO products (code, name, description, price_cents, image_url, material, model_url, visible)
+    VALUES (@code, @name, @description, @priceCents, @imageUrl, @material, @modelUrl, @visible)
   `);
   const updateProduct = database.prepare(`
     UPDATE products SET
-      code = @code, slug = @slug, name = @name, category = @category,
-      description = @description, price_cents = @priceCents, image_url = @imageUrl,
-      image_alt = @imageAlt, dimension_label = @dimensionLabel,
-      dimension_value = @dimensionValue, material = @material, model_url = @modelUrl,
-      visible = @visible, sort_order = @sortOrder, updated_at = CURRENT_TIMESTAMP
+      code = @code, name = @name, description = @description, price_cents = @priceCents,
+      image_url = @imageUrl, material = @material, model_url = @modelUrl,
+      visible = @visible, updated_at = CURRENT_TIMESTAMP
     WHERE id = @id
   `);
   const insertColor = database.prepare(`
@@ -324,8 +316,9 @@ export function registerAdminRoutes(
         }
         const values = {
           ...product,
+          code: existingProduct ? existingProduct.code : generateNextProductCode(database),
           imageUrl: assets.imageUrl ?? existingProduct?.image_url,
-          modelUrl: assets.modelUrl ?? (product.removeModel ? null : existingProduct?.model_url ?? null),
+          modelUrl: assets.modelUrl ?? existingProduct?.model_url ?? null,
         };
 
         let id;
@@ -340,7 +333,7 @@ export function registerAdminRoutes(
         if (existingProduct && assets.imageUrl) {
           obsoleteFiles.push(managedAssetPath(existingProduct.image_url, catalogDirectory));
         }
-        if (existingProduct && (assets.modelUrl || product.removeModel)) {
+        if (existingProduct && assets.modelUrl) {
           obsoleteFiles.push(managedAssetPath(existingProduct.model_url, catalogDirectory));
         }
         await removeFiles(obsoleteFiles);

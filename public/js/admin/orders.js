@@ -27,6 +27,7 @@ export function initOrders({ api }) {
   const archiveListStatus = document.querySelector("#archive-list-status");
   const archiveCount = document.querySelector("#archive-count");
   const catalogView = document.querySelector("#catalog-view");
+  const paletteView = document.querySelector("#palette-view");
   const navigationButtons = document.querySelectorAll("[data-view]");
 
   function renderOrderList() {
@@ -223,6 +224,7 @@ export function initOrders({ api }) {
     state.currentSection = name;
     ordersView.hidden = name !== "orders" && name !== "archive";
     catalogView.hidden = name !== "catalog";
+    paletteView.hidden = name !== "palette";
     orderSidebar.hidden = name !== "orders";
     archiveSidebar.hidden = name !== "archive";
     if (name === "archive" && state.archive.length === 0) loadArchive();

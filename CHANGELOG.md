@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.7.0] - 2026-08-17
+
+### Added
+
+- Schermata "Palette" dedicata nella Control Room, separata dal Catalogo, con sidebar dei colori esistenti ed editor centrale per aggiungere, modificare, riordinare e rimuovere i colori della palette globale.
+
+### Changed
+
+- Sostituzione del modello 3D implicita: rimossa la checkbox "Rimuovi il modello attuale", caricando un nuovo modello si sostituisce quello precedente.
+- Corretta la visualizzazione del pulsante "Salva modifiche" sui prodotti esistenti (il rilevamento delle modifiche ora considera correttamente i campi del form).
+- Rimossi i contatori arancioni nelle intestazioni delle sidebar amministrative.
+
 ## [1.6.0] - 2026-08-16
 
 ### Added

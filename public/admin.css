@@ -406,10 +406,7 @@
 }
 
 .order-sidebar__heading span {
-  padding: 0.35rem;
-  color: var(--ink);
-  background: var(--orange);
-  font-weight: 700;
+  display: none;
 }
 
 .order-list-status {
@@ -779,6 +776,18 @@
   min-width: 13rem;
 }
 
+.save-order--delete {
+  background: #b63627;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.product-form-actions {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 1rem;
+}
+
 .catalog-workspace {
   width: min(100%, 92rem);
   min-height: calc(100vh - 7rem);
@@ -922,12 +931,19 @@
 .new-color {
   margin: 1.5rem 0;
   padding: 1rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 7rem auto;
-  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: 1rem;
   background: var(--admin-panel);
   border: 3px solid var(--ink);
+}
+
+.new-color > label:not(.status-toggle) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1 1 12rem;
 }
 
 .new-color input[type="color"] {
@@ -936,10 +952,9 @@
   border: 3px solid var(--ink);
 }
 
-.new-color button,
-.color-row > button {
+.new-color button {
   min-height: 3rem;
-  padding: 0.6rem;
+  padding: 0.6rem 1.2rem;
   color: var(--paper);
   background: var(--blue);
   border: 0;
@@ -948,13 +963,66 @@
   text-transform: uppercase;
 }
 
-.color-row .delete-color {
+.new-color #delete-color {
   background: #b63627;
 }
 
 .color-list {
   display: grid;
   gap: 0.65rem;
+}
+
+.color-list-item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+
+.color-list-item--active {
+  border-color: var(--blue);
+  box-shadow: 5px 5px 0 var(--blue);
+}
+
+.color-list-item__select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.color-list-item__select strong {
+  font-size: 0.8rem;
+}
+
+.color-list-item__select em {
+  font-style: normal;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.color-list-item .delete-color {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--paper);
+  background: #b63627;
+  border: 2px solid var(--ink);
+  font-weight: 700;
+}
+
+.color-list-item .color-order button {
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 .color-row {

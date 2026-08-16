@@ -2,6 +2,14 @@ import { state, hooks } from "./state.js";
 import { euroFormatter } from "./format.js";
 import { getViewerModule } from "../viewer-loader.js";
 
+function parsePriceEuroToCents(raw) {
+  const cleaned = String(raw).trim().replace(/\./g, "").replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const value = Number(cleaned);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.round(value * 100);
+}
+
 export function initProducts({ api }) {
   const productCount = document.querySelector("#product-count");
   const productList = document.querySelector("#product-list");
@@ -14,6 +22,25 @@ export function initProducts({ api }) {
   const assetSummary = document.querySelector("#asset-summary");
   const imageLabelSpan = productForm.elements.image.closest("label").querySelector("span");
   const modelLabelSpan = productForm.elements.model.closest("label").querySelector("span");
+  let productSnapshot = null;
+
+  function isProductFormDirty() {
+    if (!productSnapshot) return false;
+    if (productForm.elements.name.value !== productSnapshot.name) return true;
+    if (productForm.elements.description.value !== productSnapshot.description) return true;
+    if (productForm.elements.material.value !== productSnapshot.material) return true;
+    if (productForm.elements.visible.checked !== productSnapshot.visible) return true;
+    const priceCurrent = parsePriceEuroToCents(productForm.elements.price.value);
+    if (priceCurrent === null || String(priceCurrent) !== String(productSnapshot.priceCents)) return true;
+    if (productForm.elements.image.files.length > 0) return true;
+    if (productForm.elements.model.files.length > 0) return true;
+    return false;
+  }
+
+  function updateSaveVisibility() {
+    if (!state.selectedProductId) return;
+    productForm.querySelector('[type="submit"]').hidden = !isProductFormDirty();
+  }
 
   function renderProductList() {
     productList.replaceChildren();
@@ -76,7 +103,6 @@ export function initProducts({ api }) {
     state.selectedProductId = undefined;
     productForm.reset();
     productForm.elements.visible.checked = true;
-    productForm.elements.sortOrder.value = (Math.max(0, ...state.products.map((product) => product.sortOrder)) + 10);
     productForm.elements.image.required = true;
     productForm.elements.model.required = true;
     imageLabelSpan.textContent = "Immagine PNG, JPG o WebP";
@@ -86,6 +112,10 @@ export function initProducts({ api }) {
     productFeedback.textContent = "";
     renderAssetSummary();
     renderProductList();
+    const submitButton = productForm.querySelector('[type="submit"]');
+    submitButton.textContent = "Salva prodotto";
+    submitButton.hidden = false;
+    productSnapshot = null;
   }
 
   function selectProduct(id) {
@@ -93,9 +123,10 @@ export function initProducts({ api }) {
     if (!product) return newProduct();
     state.selectedProductId = id;
     productForm.reset();
-    for (const field of ["code", "slug", "name", "category", "description", "priceCents", "imageAlt", "dimensionLabel", "dimensionValue", "material", "sortOrder"]) {
+    for (const field of ["name", "description", "material"]) {
       productForm.elements[field].value = product[field];
     }
+    productForm.elements.price.value = (product.priceCents / 100).toFixed(2).replace(".", ",");
     productForm.elements.visible.checked = product.visible;
     productForm.elements.image.required = !product.imageUrl;
     productForm.elements.model.required = !product.modelUrl;
@@ -108,6 +139,16 @@ export function initProducts({ api }) {
     productFeedback.textContent = "";
     renderAssetSummary(product);
     renderProductList();
+    const submitButton = productForm.querySelector('[type="submit"]');
+    submitButton.textContent = "Salva modifiche";
+    submitButton.hidden = true;
+    productSnapshot = {
+      name: product.name,
+      description: product.description,
+      material: product.material,
+      priceCents: product.priceCents,
+      visible: product.visible,
+    };
   }
 
   async function loadCatalog(productId = state.selectedProductId, preserveProductForm = false) {
@@ -132,9 +173,15 @@ export function initProducts({ api }) {
     productFeedback.textContent = "";
     productFeedback.classList.remove("admin-feedback--error");
     try {
+      const priceCents = parsePriceEuroToCents(productForm.elements.price.value);
+      if (priceCents === null) {
+        productFeedback.textContent = "Inserisci un prezzo valido (usa la virgola per i decimali).";
+        productFeedback.classList.add("admin-feedback--error");
+        return;
+      }
       const formData = new FormData(productForm);
       formData.set("visible", String(productForm.elements.visible.checked));
-      formData.set("removeModel", String(productForm.elements.removeModel.checked));
+      formData.set("priceCents", String(priceCents));
       const saved = await api(state.selectedProductId ? `/api/admin/products/${state.selectedProductId}` : "/api/admin/products", {
         method: state.selectedProductId ? "PUT" : "POST",
         body: formData,
@@ -163,6 +210,9 @@ export function initProducts({ api }) {
       deleteProductButton.disabled = false;
     }
   });
+
+  productForm.addEventListener("input", updateSaveVisibility);
+  productForm.addEventListener("change", updateSaveVisibility);
 
   return { loadCatalog };
 }

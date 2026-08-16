@@ -55,15 +55,12 @@ export function initCatalog() {
     }
 
     setText(card, "code", product.code);
-    setText(card, "category", product.category);
     setText(card, "name", product.name);
     setText(card, "description", truncateText(product.description, MAX_DESCRIPTION_LENGTH));
-    setText(card, "dimension-label", product.dimension.label);
-    setText(card, "dimension-value", product.dimension.value);
     setText(card, "material", product.material);
 
     image.src = product.imageUrl;
-    image.alt = product.imageAlt;
+    image.alt = product.name;
     card.querySelectorAll('[data-field="price"]').forEach((priceEl) => {
       priceEl.value = (product.priceCents / 100).toFixed(2);
       priceEl.textContent = euroFormatter.format(product.priceCents / 100);

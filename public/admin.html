@@ -52,6 +52,7 @@
               <button class="admin-nav__button admin-nav__button--active" data-view="orders" type="button">Ordini</button>
               <button class="admin-nav__button" data-view="archive" type="button">Archivio</button>
               <button class="admin-nav__button" data-view="catalog" type="button">Catalogo</button>
+              <button class="admin-nav__button" data-view="palette" type="button">Palette</button>
             </nav>
           </div>
           <div class="admin-actions">
@@ -143,37 +144,43 @@
                 <label class="status-toggle"><input name="visible" type="checkbox" checked> Visibile</label>
               </header>
               <div class="product-fields">
-                <label><span>Codice</span><input name="code" maxlength="30" pattern="[A-Za-z0-9_-]+" required></label>
-                <label><span>Slug</span><input name="slug" maxlength="80" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></label>
                 <label class="product-fields__wide"><span>Nome</span><input name="name" maxlength="120" required></label>
-                <label><span>Categoria</span><input name="category" maxlength="120" required></label>
-                <label><span>Prezzo in centesimi</span><input name="priceCents" type="number" min="0" step="1" required></label>
+                <label><span>Prezzo (&euro;)</span><input name="price" type="text" inputmode="decimal" autocomplete="off" required></label>
                 <label class="product-fields__wide"><span>Descrizione</span><textarea name="description" maxlength="1000" required></textarea></label>
-                <label><span>Etichetta dimensione</span><input name="dimensionLabel" maxlength="60" required></label>
-                <label><span>Valore dimensione</span><input name="dimensionValue" maxlength="60" required></label>
                 <label><span>Materiale</span><input name="material" maxlength="80" required></label>
-                <label><span>Ordine</span><input name="sortOrder" type="number" min="0" step="1" required></label>
-                <label class="product-fields__wide"><span>Testo alternativo immagine</span><input name="imageAlt" maxlength="180" required></label>
                 <label><span>Immagine PNG, JPG o WebP</span><input name="image" type="file" accept="image/png,image/jpeg,image/webp"></label>
                 <label><span>Modello 3MF facoltativo</span><input name="model" type="file"></label>
-                <label class="remove-model"><input name="removeModel" type="checkbox"> Rimuovi il modello attuale</label>
+
               </div>
               <div class="asset-summary" id="asset-summary"></div>
               <p class="admin-feedback" id="product-feedback" role="status"></p>
-              <div class="order-actions">
-                <button class="delete-order" id="delete-product" type="button" hidden>Elimina prodotto</button>
+              <div class="order-actions product-form-actions">
                 <button class="save-order" type="submit">Salva prodotto</button>
+                <button class="save-order save-order--delete" id="delete-product" type="button" hidden>Elimina prodotto</button>
               </div>
             </form>
+          </div>
+        </div>
 
+        <div class="catalog-workspace" id="palette-view" hidden>
+          <aside class="order-sidebar palette-sidebar" aria-labelledby="palette-list-title">
+            <div class="order-sidebar__heading">
+              <h2 id="palette-list-title">Colori</h2>
+              <span id="color-count">00</span>
+            </div>
+            <div class="color-list" id="color-list"></div>
+          </aside>
+
+          <div class="catalog-main">
             <section class="color-manager" aria-labelledby="color-title">
-              <header><div><p class="section-number">Palette globale</p><h2 id="color-title">Colori</h2></div></header>
+              <header><div><p class="section-number">Palette globale</p><h2 id="color-title">Nuovo colore</h2></div></header>
               <form class="new-color" id="new-color-form">
                 <label><span>Nome</span><input name="name" maxlength="60" required></label>
                 <label><span>Colore</span><input name="hexValue" type="color" value="#FF6534" required></label>
+                <label class="status-toggle"><input name="active" type="checkbox" checked> Attivo</label>
                 <button type="submit">Aggiungi</button>
+                <button type="button" id="delete-color" class="save-order--delete" hidden>Rimuovi</button>
               </form>
-              <div class="color-list" id="color-list"></div>
               <p class="admin-feedback" id="color-feedback" role="status"></p>
             </section>
           </div>
@@ -329,15 +336,18 @@
     </template>
 
     <template id="color-template">
-      <form class="color-row">
+      <div class="color-list-item">
         <span class="color-swatch" data-field="swatch" aria-hidden="true"></span>
-        <input data-field="name" maxlength="60" aria-label="Nome colore" required>
-        <input data-field="hex" type="color" aria-label="Valore colore" required>
-        <label><input data-field="active" type="checkbox"> Attivo</label>
-        <div class="color-order"><button data-field="up" type="button" aria-label="Sposta su">&uarr;</button><button data-field="down" type="button" aria-label="Sposta giu">&darr;</button></div>
-        <button data-field="save" type="submit">Salva</button>
-        <button data-field="delete" type="button" class="delete-color">Rimuovi</button>
-      </form>
+        <button class="color-list-item__select" type="button" data-field="select">
+          <strong data-field="name"></strong>
+          <em data-field="status"></em>
+        </button>
+        <div class="color-order">
+          <button data-field="up" type="button" aria-label="Sposta su">&uarr;</button>
+          <button data-field="down" type="button" aria-label="Sposta giu">&darr;</button>
+        </div>
+        <button data-field="delete" type="button" class="delete-color" aria-label="Rimuovi">&times;</button>
+      </div>
     </template>
 
     <dialog class="viewer-dialog" id="viewer-dialog" aria-labelledby="viewer-title">

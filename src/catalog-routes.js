@@ -5,17 +5,10 @@ async function serializeProduct(product, catalogDirectory = defaultCatalogDirect
   return {
     id: product.id,
     code: product.code,
-    slug: product.slug,
     name: product.name,
-    category: product.category,
     description: product.description,
     priceCents: product.price_cents,
     imageUrl: product.image_url,
-    imageAlt: product.image_alt,
-    dimension: {
-      label: product.dimension_label,
-      value: product.dimension_value,
-    },
     material: product.material,
     modelUrl: product.model_url,
     inspection,
@@ -26,7 +19,7 @@ export function registerCatalogRoutes(app, database, catalogDirectory = defaultC
   const listProducts = database.prepare(`
     SELECT * FROM products
     WHERE visible = 1
-    ORDER BY sort_order, id
+    ORDER BY id
   `);
   const findVisibleProduct = database.prepare(`
     SELECT * FROM products
