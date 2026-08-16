@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import multer from "multer";
 import sharp from "sharp";
-import { detectModelFormat, inspectModelFile, MAX_MODEL_FILE_SIZE } from "./model-files.js";
+import { detectModelFormat, inspect3mfFile, inspectModelFile, MAX_MODEL_FILE_SIZE } from "./model-files.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_LIMIT = 5 * 1024 * 1024;
@@ -112,4 +112,22 @@ export async function removeFiles(filenames) {
   await Promise.all(filenames.filter(Boolean).map((filename) => unlink(filename).catch((error) => {
     if (error.code !== "ENOENT") console.error(error);
   })));
+}
+
+const inspectionCache = new Map();
+
+export async function inspectCatalogModel(modelUrl, directory = defaultCatalogDirectory) {
+  if (!modelUrl) return null;
+  const filePath = managedAssetPath(modelUrl, directory);
+  if (!filePath) return null;
+  try {
+    const info = await stat(filePath);
+    const cached = inspectionCache.get(modelUrl);
+    if (cached && cached.mtimeMs === info.mtimeMs) return cached.inspection;
+    const inspection = await inspect3mfFile(filePath);
+    inspectionCache.set(modelUrl, { mtimeMs: info.mtimeMs, inspection });
+    return inspection;
+  } catch {
+    return null;
+  }
 }

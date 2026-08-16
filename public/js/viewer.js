@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { ThreeMFLoader } from "three/addons/loaders/3MFLoader.js";
+import { createColorOption } from "./colors.js";
 
 const dialog = document.querySelector("#viewer-dialog");
 const title = document.querySelector("#viewer-title");
@@ -190,31 +191,6 @@ function startRendering() {
   });
 }
 
-function createViewerColorOption(color, groupName, selected) {
-  const label = document.createElement("label");
-  const input = document.createElement("input");
-  const swatch = document.createElement("span");
-
-  label.className = "color-option";
-  label.title = color.name;
-  input.type = "radio";
-  input.name = groupName;
-  input.value = color.id;
-  input.checked = selected;
-  input.defaultChecked = selected;
-  input.setAttribute("aria-label", color.name);
-  swatch.className = "color-option__swatch";
-  swatch.style.backgroundColor = color.hexValue;
-
-  label.append(input, swatch);
-  input.addEventListener("change", () => {
-    if (currentMaterial) {
-      currentMaterial.color.setHex(Number.parseInt(color.hexValue.replace("#", ""), 16));
-    }
-  });
-  return label;
-}
-
 function createPlateOption(plate, selected) {
   const button = document.createElement("button");
   button.type = "button";
@@ -276,7 +252,16 @@ export async function openModelViewer(product, colorHex = "#ffffff", availableCo
   let selectedIndex = availableColors.findIndex((color) => color.hexValue.toLowerCase() === normalizedHex);
   if (selectedIndex === -1) selectedIndex = 0;
   availableColors.forEach((color, index) => {
-    colorOptionsContainer.append(createViewerColorOption(color, "viewer-color", index === selectedIndex));
+    colorOptionsContainer.append(
+      createColorOption(color, "viewer-color", index === selectedIndex, {
+        required: false,
+        onChange: (selectedColor) => {
+          if (currentMaterial) {
+            currentMaterial.color.setHex(Number.parseInt(selectedColor.hexValue.replace("#", ""), 16));
+          }
+        },
+      }),
+    );
   });
 
   if (!dialog.open) {

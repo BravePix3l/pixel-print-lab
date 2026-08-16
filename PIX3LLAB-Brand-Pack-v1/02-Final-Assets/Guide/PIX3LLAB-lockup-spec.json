@@ -1,0 +1,44 @@
+{
+  "nome": "PIX3LLAB lockup",
+  "versione": 1,
+  "unita": "viewBox SVG",
+  "canvas": {
+    "larghezza": 960,
+    "altezza": 200
+  },
+  "marchio": {
+    "x": 30,
+    "y": 30,
+    "larghezza": 140,
+    "altezza": 140,
+    "scala": 1.4,
+    "geometria_comune": {
+      "box_master": 100,
+      "cornice": 10,
+      "area_arancione": 80,
+      "pixel": 20,
+      "distanza_pixel": 10,
+      "inset_pixel": 15
+    },
+    "variante_chiara": {
+      "colore_cornice": "#17201a"
+    },
+    "variante_scura": {
+      "colore_cornice": "#f3f0e6"
+    }
+  },
+  "wordmark": {
+    "x": 200,
+    "baseline_y": 103,
+    "font_sorgente": "Dogica Bold",
+    "formato_master": "tracciati SVG"
+  },
+  "descriptor": {
+    "x": 202,
+    "baseline_y": 156,
+    "font_sorgente": "Dogica Pixel",
+    "formato_master": "tracciati SVG"
+  },
+  "gap_marchio_wordmark": 30,
+  "regola": "Le varianti condividono integralmente geometria, scala, box, ancoraggi e baseline. Nella variante scura cambia soltanto il colore della cornice strutturale del marchio: da ink a paper."
+}

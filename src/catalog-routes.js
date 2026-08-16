@@ -1,4 +1,7 @@
-function serializeProduct(product) {
+import { defaultCatalogDirectory, inspectCatalogModel } from "./catalog-assets.js";
+
+async function serializeProduct(product, catalogDirectory = defaultCatalogDirectory) {
+  const inspection = await inspectCatalogModel(product.model_url, catalogDirectory);
   return {
     id: product.id,
     code: product.code,
@@ -15,10 +18,11 @@ function serializeProduct(product) {
     },
     material: product.material,
     modelUrl: product.model_url,
+    inspection,
   };
 }
 
-export function registerCatalogRoutes(app, database) {
+export function registerCatalogRoutes(app, database, catalogDirectory = defaultCatalogDirectory) {
   const listProducts = database.prepare(`
     SELECT * FROM products
     WHERE visible = 1
@@ -35,12 +39,12 @@ export function registerCatalogRoutes(app, database) {
     ORDER BY sort_order, id
   `);
 
-  app.get("/api/products", (_request, response) => {
-    const products = listProducts.all().map(serializeProduct);
+  app.get("/api/products", async (_request, response) => {
+    const products = await Promise.all(listProducts.all().map((product) => serializeProduct(product, catalogDirectory)));
     response.json({ data: products, count: products.length });
   });
 
-  app.get("/api/products/:id", (request, response) => {
+  app.get("/api/products/:id", async (request, response) => {
     if (!/^\d+$/.test(request.params.id)) {
       return response.status(400).json({
         error: { code: "INVALID_PRODUCT_ID", message: "L'identificativo prodotto deve essere numerico." },
@@ -54,7 +58,7 @@ export function registerCatalogRoutes(app, database) {
       });
     }
 
-    return response.json({ data: serializeProduct(product) });
+    return response.json({ data: await serializeProduct(product, catalogDirectory) });
   });
 
   app.get("/api/colors", (_request, response) => {

@@ -6,8 +6,17 @@
     <meta name="description" content="Pannello amministrativo di Pixel Print Lab.">
     <title>Control Room | Pixel Print Lab | PIX3LLAB</title>
     <link rel="icon" href="/brand/PIX3LLAB-favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=1.2.0">
-    <link rel="stylesheet" href="/admin.css?v=1.2.0">
+<link rel="stylesheet" href="/css/base.css?v=1.2.9">
+<link rel="stylesheet" href="/css/layout.css?v=1.2.9">
+<link rel="stylesheet" href="/admin.css?v=1.2.9">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/three/build/three.module.js",
+          "three/addons/": "/vendor/three/examples/jsm/"
+        }
+      }
+    </script>
   </head>
   <body class="admin-body">
     <main class="admin-shell">
@@ -330,6 +339,33 @@
         <button data-field="delete" type="button" class="delete-color">Rimuovi</button>
       </form>
     </template>
+
+    <dialog class="viewer-dialog" id="viewer-dialog" aria-labelledby="viewer-title">
+      <div class="viewer-panel">
+        <header class="viewer-panel__header">
+          <div>
+            <p class="section-number">Anteprima modello</p>
+            <h2 id="viewer-title">Modello 3D</h2>
+          </div>
+          <form method="dialog">
+            <button class="icon-button" type="submit" aria-label="Chiudi il visualizzatore">X</button>
+          </form>
+        </header>
+
+        <div class="viewer-viewport" id="viewer-viewport" role="img" aria-label="Visualizzatore del modello 3D">
+          <p class="viewer-plate-size">Piatto 256 x 256 x 256 mm</p>
+          <p class="viewer-status" id="viewer-status" role="status">Caricamento modello...</p>
+          <div class="viewer-loader" aria-hidden="true"><span></span><span></span><span></span></div>
+        </div>
+
+        <footer class="viewer-controls">
+          <div class="plate-options" id="viewer-plate-options"></div>
+          <div class="color-options" id="viewer-color-options"></div>
+          <p><strong>Trascina</strong> per ruotare <span aria-hidden="true">/</span> <strong>Rotella o gesto</strong> per zoomare</p>
+          <button class="reset-view" id="viewer-reset" type="button" disabled>Ripristina visuale</button>
+        </footer>
+      </div>
+    </dialog>
 
     <script type="module" src="/admin.js?v=1.2.0"></script>
   </body>

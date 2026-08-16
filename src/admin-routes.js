@@ -4,7 +4,9 @@ import { AuthError } from "./auth-service.js";
 import {
   CatalogAssetError,
   createCatalogUpload,
+  defaultCatalogDirectory,
   getUploadedPaths,
+  inspectCatalogModel,
   managedAssetPath,
   removeFiles,
   validateCatalogFiles,
@@ -91,7 +93,8 @@ function validateProduct(body) {
   };
 }
 
-function serializeAdminProduct(product) {
+async function serializeAdminProduct(product, catalogDirectory = defaultCatalogDirectory) {
+  const inspection = await inspectCatalogModel(product.model_url, catalogDirectory);
   return {
     id: product.id,
     code: product.code,
@@ -106,6 +109,7 @@ function serializeAdminProduct(product) {
     dimensionValue: product.dimension_value,
     material: product.material,
     modelUrl: product.model_url,
+    inspection,
     visible: Boolean(product.visible),
     sortOrder: product.sort_order,
   };
@@ -341,7 +345,7 @@ export function registerAdminRoutes(
         }
         await removeFiles(obsoleteFiles);
         return response.status(existingProduct ? 200 : 201).json({
-          data: serializeAdminProduct(findAnyProduct.get(id)),
+          data: await serializeAdminProduct(findAnyProduct.get(id), catalogDirectory),
         });
       } catch (error) {
         await removeFiles(uploadedPaths);
@@ -385,10 +389,10 @@ export function registerAdminRoutes(
     }
   });
 
-  app.get("/api/admin/catalog", requireAdmin, (_request, response) => {
+  app.get("/api/admin/catalog", requireAdmin, async (_request, response) => {
     response.json({
       data: {
-        products: listAdminProducts.all().map(serializeAdminProduct),
+        products: await Promise.all(listAdminProducts.all().map((product) => serializeAdminProduct(product, catalogDirectory))),
         colors: listAdminColors.all().map(serializeAdminColor),
       },
     });

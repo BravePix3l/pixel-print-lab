@@ -62,7 +62,7 @@ export function createApp({
     response.json({ status: "ok" });
   });
 
-  registerCatalogRoutes(app, database);
+  registerCatalogRoutes(app, database, catalogDirectory);
   registerAccountRoutes(app, { database, auth, orderFileDirectory, disableRateLimits: disableAuthRateLimits });
   registerOrderRoutes(app, {
     database,

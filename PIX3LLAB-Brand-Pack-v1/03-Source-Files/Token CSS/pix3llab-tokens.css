@@ -1,0 +1,29 @@
+:root {
+  /* PIX3LLAB core */
+  --pxl-ink: #17201a;
+  --pxl-paper: #f3f0e6;
+  --pxl-panel: #fffdf5;
+  --pxl-orange: #ff6534;
+  --pxl-blue: #4277ff;
+  /* Riservato esclusivamente a piccoli LED/stati positivi. */
+  --pxl-status-green: #2ba85b;
+  --pxl-muted: #4f574f;
+
+  /* Geometria */
+  --pxl-line-strong: 4px;
+  --pxl-line: 3px;
+  --pxl-radius: 0;
+  --pxl-shadow-sm: 4px 4px 0 var(--pxl-ink);
+  --pxl-shadow-md: 6px 6px 0 var(--pxl-orange);
+  --pxl-shadow-lg: 10px 10px 0 var(--pxl-blue);
+  --pxl-grid: 24px;
+
+  /* Tipografia: font locali concessi con SIL OFL 1.1 */
+  --pxl-font-display: "Dogica Bold", "Dogica", monospace;
+  --pxl-font-pixel: "Dogica Pixel", monospace;
+  --pxl-font-body: Arial, Helvetica, sans-serif;
+
+  /* Da definire nel singolo progetto */
+  --project-accent: var(--pxl-orange);
+  --project-accent-soft: #f7c9ad;
+}

@@ -9,7 +9,7 @@ import {
   reconcileCart,
   removeCartItem,
   updateCartQuantity,
-} from "../public/cart.js";
+} from "../public/js/cart.js";
 
 const firstSelection = { productId: 1, colorId: 2, quantity: 3 };
 
