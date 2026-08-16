@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.6.0] - 2026-08-16
+
+### Added
+
+- Visualizzatore 3D multi-piatto nel catalogo pubblico e nella Control Room, con selezione del piatto quando il modello ne contiene piu di uno.
+- Serializzazione `inspection` (piatti e unta di misura) nelle API dei prodotti pubbliche e di amministrazione.
+- Pannello asset del prodotto: immagine e modello 3D obbligatori quando mancano, nomi file correnti mostrati nelle label, pulsante "Visualizza modello 3D" omologato ai collegamenti "Apri immagine/3MF attuale" e allineato su una riga.
+- Asset di brand PIX3LLAB (logo, favicon, token) e font (Bebas Neue, Dogica).
+
+### Changed
+
+- Rifattorizzazione del frontend in moduli `public/js/` e fogli di stile `public/css/`, con spostamento di `cart.js` e `viewer.js` sotto `public/js/`.
+
 ## [1.5.0] - 2026-08-13
 
 ### Added
